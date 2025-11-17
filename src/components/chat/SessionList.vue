@@ -6,7 +6,7 @@ import SessionItem from './SessionItem.vue'
 
 interface Props {
   searchText?: string
-  filterType?: 'all' | 'private' | 'group'
+  filterType?: 'all' | 'private' | 'group' | 'official' | 'unknown'
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -36,6 +36,10 @@ const sessionList = computed(() => {
     list = sessionStore.privateSessions
   } else if (props.filterType === 'group') {
     list = sessionStore.groupSessions
+  } else if (props.filterType === 'official') {
+    list = sessionStore.officialSessions
+  } else if (props.filterType === 'unknown') {
+    list = sessionStore.unknownSessions
   }
 
   // 搜索过滤

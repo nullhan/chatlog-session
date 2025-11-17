@@ -31,7 +31,23 @@ interface ApiResponse<T> {
 function transformSession(apiData: SessionApiResponse): Session {
   // 判断是否是群聊（userName 包含 @chatroom）
   const isChatRoom = apiData.userName.includes('@chatroom')
-  
+  const isOfficialAccount = apiData.userName.startsWith('gh_')
+  const isHolder = apiData.userName.includes("@placeholder_foldgroup") || apiData.userName.includes("brandsessionholder") || apiData.userName.includes("brandservicesessionholder") //"userName": "@placeholder_foldgroup",  "userName": "brandsessionholder", "userName": "brandservicesessionholder",
+  const isPrivate = !isChatRoom && !isOfficialAccount && !isHolder
+
+  let session_type: 'group' | 'private' | 'official' | 'unknown' = 'unknown'
+  if (isChatRoom) {
+    session_type = 'group'
+  } else if (isPrivate) {
+    session_type = 'private'
+  } else if(isOfficialAccount) {
+    session_type = 'official'
+  } else {
+    session_type = 'unknown'
+  }
+
+
+
   return {
     id: apiData.userName,
     talker: apiData.userName,
@@ -39,7 +55,7 @@ function transformSession(apiData: SessionApiResponse): Session {
     name: apiData.nickName,
     avatar: '', // 后端未返回头像，暂时为空
     remark: '',
-    type: isChatRoom ? 'group' : 'private',
+    type: session_type,
     lastMessage: apiData.content ? {
       content: apiData.content,
       createTime: new Date(apiData.nTime).getTime(),
@@ -61,30 +77,30 @@ class SessionAPI {
   /**
    * 获取会话列表
    * GET /api/v1/session
-   * 
+   *
    * @param params 查询参数
    * @returns 会话列表
    */
   async getSessions(params?: SessionParams): Promise<Session[]> {
     const response = await request.get<ApiResponse<SessionApiResponse>>('/api/v1/session', params)
-    
+
     // 转换数据格式
     if (response && response.items && Array.isArray(response.items)) {
       return response.items.map(item => transformSession(item))
     }
-    
+
     // 兼容旧格式（如果直接返回数组）
     if (Array.isArray(response)) {
       return (response as any[]).map(item => transformSession(item))
     }
-    
+
     return []
   }
 
   /**
    * 获取会话详情
    * GET /api/v1/session/:talker
-   * 
+   *
    * @param talker 会话 ID
    * @returns 会话详情
    */
@@ -95,7 +111,7 @@ class SessionAPI {
 
   /**
    * 获取所有会话（分页）
-   * 
+   *
    * @param limit 返回数量
    * @param offset 偏移量
    * @returns 会话列表
@@ -106,18 +122,18 @@ class SessionAPI {
 
   /**
    * 按类型获取会话
-   * 
-   * @param type 会话类型（private: 私聊, group: 群聊）
+   *
+   * @param type 会话类型（private: 私聊, group: 群聊, official: 公众号, unknown: 其他）
    * @param limit 返回数量
    * @returns 会话列表
    */
-  getSessionsByType(type: 'private' | 'group', limit = 50): Promise<Session[]> {
+  getSessionsByType(type: 'private' | 'group' | 'official' | 'unknown', limit = 50): Promise<Session[]> {
     return this.getSessions({ type, limit })
   }
 
   /**
    * 获取私聊会话列表
-   * 
+   *
    * @param limit 返回数量
    * @returns 私聊会话列表
    */
@@ -127,7 +143,7 @@ class SessionAPI {
 
   /**
    * 获取群聊会话列表
-   * 
+   *
    * @param limit 返回数量
    * @returns 群聊会话列表
    */
@@ -137,7 +153,7 @@ class SessionAPI {
 
   /**
    * 获取置顶会话
-   * 
+   *
    * @returns 置顶会话列表
    */
   async getPinnedSessions(): Promise<Session[]> {
@@ -148,7 +164,7 @@ class SessionAPI {
   /**
    * 获取活跃会话
    * （根据最后消息时间排序）
-   * 
+   *
    * @param limit 返回数量
    * @returns 活跃会话列表
    */
@@ -163,14 +179,14 @@ class SessionAPI {
 
   /**
    * 搜索会话
-   * 
+   *
    * @param keyword 搜索关键词（会话名称或备注）
    * @returns 搜索结果
    */
   async searchSessions(keyword: string): Promise<Session[]> {
     const sessions = await this.getSessions()
     const lowerKeyword = keyword.toLowerCase()
-    
+
     return sessions.filter(session => {
       const name = (session.name || '').toLowerCase()
       const remark = (session.remark || '').toLowerCase()
@@ -180,7 +196,7 @@ class SessionAPI {
 
   /**
    * 获取未读会话
-   * 
+   *
    * @returns 有未读消息的会话列表
    */
   async getUnreadSessions(): Promise<Session[]> {
@@ -190,7 +206,7 @@ class SessionAPI {
 
   /**
    * 获取会话统计信息
-   * 
+   *
    * @returns 统计信息
    */
   async getSessionStats(): Promise<{
@@ -201,7 +217,7 @@ class SessionAPI {
     pinned: number
   }> {
     const sessions = await this.getSessions()
-    
+
     return {
       total: sessions.length,
       private: sessions.filter(s => s.type === 'private').length,
@@ -213,7 +229,7 @@ class SessionAPI {
 
   /**
    * 批量获取会话详情
-   * 
+   *
    * @param talkers 会话 ID 列表
    * @returns 会话详情列表
    */

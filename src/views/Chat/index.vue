@@ -17,7 +17,7 @@ const messageListRef = ref()
 const searchText = ref('')
 
 // 筛选类型
-const filterType = ref<'all' | 'private' | 'group'>('all')
+const filterType = ref<'all' | 'private' | 'group' | 'official' | 'unknown' >('all')
 
 // 当前选中的会话
 const currentSession = computed(() => {
@@ -115,7 +115,7 @@ onMounted(() => {
               {{ sessionStore.totalUnreadCount }}
             </el-tag>
           </div>
-          
+
           <!-- 搜索框 -->
           <el-input
             v-model="searchText"
@@ -133,6 +133,8 @@ onMounted(() => {
               <el-radio-button label="all">全部</el-radio-button>
               <el-radio-button label="private">私聊</el-radio-button>
               <el-radio-button label="group">群聊</el-radio-button>
+              <el-radio-button label="official">公众号</el-radio-button>
+              <el-radio-button label="unknown">其他</el-radio-button>
             </el-radio-group>
           </div>
         </div>

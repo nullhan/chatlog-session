@@ -46,7 +46,7 @@ export const useSessionStore = defineStore('session', () => {
   /**
    * 筛选类型
    */
-  const filterType = ref<'all' | 'private' | 'group'>('all')
+  const filterType = ref < 'all' | 'private' | 'group' | 'official' | 'unknown' >('all')
 
   /**
    * 搜索关键词
@@ -168,6 +168,19 @@ export const useSessionStore = defineStore('session', () => {
   })
 
   /**
+   * 公众号会话列表
+   */
+  const officialSessions = computed(() => {
+    return sessions.value.filter(s => s.type === 'official')
+  })
+
+  /**
+   * 其他类型会话列表
+   */
+  const unknownSessions = computed(() => {
+    return sessions.value.filter(s => s.type === 'unknown')
+  })
+  /**
    * 是否有会话
    */
   const hasSessions = computed(() => sessions.value.length > 0)
@@ -185,6 +198,8 @@ export const useSessionStore = defineStore('session', () => {
       total: sessions.value.length,
       private: privateSessions.value.length,
       group: groupSessions.value.length,
+      official: officialSessions.value.length,
+      unknown: unknownSessions.value.length,
       unread: unreadSessions.value.length,
       pinned: pinnedSessions.value.length,
     }
@@ -263,7 +278,7 @@ export const useSessionStore = defineStore('session', () => {
   async function getSessionDetail(talker: string) {
     try {
       const session = await sessionAPI.getSessionDetail(talker)
-      
+
       // 更新或添加到列表
       const index = sessions.value.findIndex(s => s.talker === talker)
       if (index !== -1) {
@@ -284,7 +299,7 @@ export const useSessionStore = defineStore('session', () => {
    */
   async function selectSession(talker: string) {
     currentSessionId.value = talker
-    
+
     // 如果会话不在列表中，获取详情
     if (!sessions.value.find(s => s.talker === talker)) {
       await getSessionDetail(talker)
@@ -294,7 +309,7 @@ export const useSessionStore = defineStore('session', () => {
   /**
    * 设置筛选类型
    */
-  function setFilterType(type: 'all' | 'private' | 'group') {
+  function setFilterType(type: 'all' | 'private' | 'group' | 'official' | 'unknown') {
     filterType.value = type
   }
 
@@ -527,6 +542,8 @@ export const useSessionStore = defineStore('session', () => {
     totalUnreadCount,
     privateSessions,
     groupSessions,
+    officialSessions,
+    unknownSessions,
     hasSessions,
     hasCurrentSession,
     sessionStats,

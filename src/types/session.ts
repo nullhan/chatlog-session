@@ -10,7 +10,7 @@ export interface Session {
   name?: string
   avatar: string
   remark?: string
-  type?: 'private' | 'group'
+  type?: 'private' | 'group' | 'official' | 'unknown'
   lastMessage?: {
     content: string
     createTime: number
