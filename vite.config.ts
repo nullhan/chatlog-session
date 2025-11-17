@@ -27,6 +27,14 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  css: {
+    preprocessorOptions: {
+      scss: {
+        api: 'modern-compiler', // 使用现代 Sass API
+        additionalData: `@use "@/assets/styles/variables.scss" as *;`,
+      },
+    },
+  },
   server: {
     port: 5173,
     host: true,

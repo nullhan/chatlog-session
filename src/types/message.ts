@@ -16,8 +16,10 @@ export enum MessageType {
  * 消息接口
  */
 export interface Message {
+  id: number
   seq: number
   time: string
+  createTime: number
   talker: string
   talkerName: string
   sender: string

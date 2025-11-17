@@ -1,12 +1,20 @@
+import type { ChatroomMember } from './contact'
+
 /**
  * 会话接口
  */
 export interface Session {
   talker: string
   talkerName: string
+  name?: string
   avatar: string
   remark?: string
-  lastMessage: string
+  type?: 'private' | 'group'
+  lastMessage?: {
+    content: string
+    createTime: number
+    type: number
+  }
   lastTime: string
   lastMessageType: number
   unreadCount: number
@@ -24,16 +32,6 @@ export interface SessionDetail extends Session {
   members?: ChatroomMember[]
   memberCount?: number
   owner?: string
-}
-
-/**
- * 群聊成员接口
- */
-export interface ChatroomMember {
-  wxid: string
-  nickname: string
-  displayName: string
-  avatar?: string
 }
 
 /**

@@ -3,10 +3,10 @@
  */
 
 // 变量定义
-@import './variables.scss';
+@use './variables.scss' as *;
 
 // 混入
-@import './mixins.scss';
+@use './mixins.scss' as *;
 
 // 重置样式
 * {

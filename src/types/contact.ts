@@ -24,6 +24,9 @@ export interface Contact {
   signature?: string
   labelIds?: string[]
   labels?: string[]
+  isStarred?: boolean
+  lastContactTime?: number
+  memberList?: string[]
 }
 
 /**

@@ -4,6 +4,7 @@ import { useAppStore } from '@/stores/app'
 
 const appStore = useAppStore()
 const loading = ref(true)
+const searchText = ref('')
 
 onMounted(() => {
   setTimeout(() => {
@@ -111,10 +112,7 @@ onMounted(() => {
   </div>
 </template>
 
-<script lang="ts">
-import { ref } from 'vue'
-const searchText = ref('')
-</script>
+
 
 <style lang="scss" scoped>
 .chat-page {

@@ -3,7 +3,7 @@
  * 基于 axios 封装统一的请求处理
  */
 
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios'
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError, InternalAxiosRequestConfig } from 'axios'
 import { ElMessage } from 'element-plus'
 import type { ApiResponse, ApiError } from '@/types/api'
 
@@ -27,7 +27,7 @@ const service: AxiosInstance = axios.create(config)
  * 请求拦截器
  */
 service.interceptors.request.use(
-  (config: AxiosRequestConfig) => {
+  (config: InternalAxiosRequestConfig) => {
     // 添加时间戳防止缓存
     if (config.method?.toLowerCase() === 'get') {
       config.params = {

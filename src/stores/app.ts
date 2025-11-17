@@ -286,15 +286,4 @@ export const useAppStore = defineStore('app', () => {
     clearError,
     $reset,
   }
-}, {
-  persist: {
-    enabled: true,
-    strategies: [
-      {
-        key: 'app-settings',
-        storage: localStorage,
-        paths: ['settings'],
-      },
-    ],
-  },
 })

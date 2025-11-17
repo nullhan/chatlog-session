@@ -8,7 +8,7 @@
 | **当前版本** | v1.0.0-dev |
 | **开始日期** | 2025-11-17 |
 | **目标发布** | 2026-01-15 |
-| **开发进度** | 15% |
+| **开发进度** | 40% |
 | **状态** | 开发中 🚧 |
 
 ---
@@ -63,55 +63,79 @@
 
 ---
 
-### 阶段 2: 核心功能 🚧 (0%)
+### 阶段 2: 核心功能 ✅ (100%)
 
-#### API 接口层 (0/4)
-- [ ] 聊天记录 API (`src/api/chatlog.ts`)
-  - [ ] getChatlog - 获取聊天记录
-  - [ ] searchMessages - 搜索消息
-- [ ] 会话管理 API (`src/api/session.ts`)
-  - [ ] getSessions - 获取会话列表
-  - [ ] getSessionDetail - 获取会话详情
-- [ ] 联系人 API (`src/api/contact.ts`)
-  - [ ] getContacts - 获取联系人列表
-  - [ ] getChatrooms - 获取群聊列表
-  - [ ] getContactDetail - 获取联系人详情
-- [ ] 多媒体 API (`src/api/media.ts`)
-  - [ ] getImageUrl - 获取图片URL
-  - [ ] getVideoUrl - 获取视频URL
-  - [ ] getVoiceUrl - 获取语音URL
+#### API 接口层 (4/4) ✅
+- [x] 聊天记录 API (`src/api/chatlog.ts`)
+  - [x] getChatlog - 获取聊天记录
+  - [x] searchMessages - 搜索消息
+  - [x] exportJSON/CSV/Text - 导出聊天记录
+  - [x] getSessionMessages - 获取会话消息
+  - [x] searchInSession - 会话内搜索
+- [x] 会话管理 API (`src/api/session.ts`)
+  - [x] getSessions - 获取会话列表
+  - [x] getSessionDetail - 获取会话详情
+  - [x] getPrivateSessions - 获取私聊
+  - [x] getGroupSessions - 获取群聊
+  - [x] searchSessions - 搜索会话
+- [x] 联系人 API (`src/api/contact.ts`)
+  - [x] getContacts - 获取联系人列表
+  - [x] getChatrooms - 获取群聊列表
+  - [x] getContactDetail - 获取联系人详情
+  - [x] getFriends - 获取好友列表
+  - [x] searchContacts - 搜索联系人
+  - [x] getChatroomMembers - 获取群成员
+- [x] 多媒体 API (`src/api/media.ts`)
+  - [x] getImageUrl - 获取图片URL
+  - [x] getVideoUrl - 获取视频URL
+  - [x] getVoiceUrl - 获取语音URL
+  - [x] getFileUrl - 获取文件URL
+  - [x] downloadImage/Video/Voice - 下载资源
+  - [x] preloadImage - 预加载图片
 
-#### 状态管理 (0/4)
-- [ ] App Store (`src/stores/app.ts`)
-  - [ ] 应用配置
-  - [ ] 主题切换
-  - [ ] 加载状态
-- [ ] Chat Store (`src/stores/chat.ts`)
-  - [ ] 消息列表
-  - [ ] 当前会话
-  - [ ] 消息加载
-  - [ ] 消息搜索
-- [ ] Session Store (`src/stores/session.ts`)
-  - [ ] 会话列表
-  - [ ] 会话筛选
-  - [ ] 会话排序
-- [ ] Contact Store (`src/stores/contact.ts`)
-  - [ ] 联系人列表
-  - [ ] 群聊列表
-  - [ ] 联系人搜索
+#### 状态管理 (4/4) ✅
+- [x] App Store (`src/stores/app.ts`)
+  - [x] 应用配置
+  - [x] 主题切换
+  - [x] 加载状态
+  - [x] 移动端检测
+  - [x] 侧边栏状态
+- [x] Chat Store (`src/stores/chat.ts`)
+  - [x] 消息列表
+  - [x] 当前会话
+  - [x] 消息加载（分页）
+  - [x] 消息搜索
+  - [x] 消息选择
+  - [x] 按日期分组
+- [x] Session Store (`src/stores/session.ts`)
+  - [x] 会话列表
+  - [x] 会话筛选（私聊/群聊）
+  - [x] 会话排序（时间/名称/未读）
+  - [x] 置顶会话
+  - [x] 未读统计
+  - [x] 会话搜索
+- [x] Contact Store (`src/stores/contact.ts`)
+  - [x] 联系人列表
+  - [x] 群聊列表
+  - [x] 联系人搜索
+  - [x] 按首字母分组
+  - [x] 星标联系人
+  - [x] 联系人筛选
 
-#### 路由配置 (0/1)
-- [ ] 路由设置 (`src/router/index.ts`)
-  - [ ] 主页面路由
-  - [ ] 聊天页面路由
-  - [ ] 联系人页面路由
-  - [ ] 设置页面路由
+#### 路由配置 (1/1) ✅
+- [x] 路由设置 (`src/router/index.ts`)
+  - [x] 主页面路由
+  - [x] 聊天页面路由
+  - [x] 联系人页面路由
+  - [x] 设置页面路由
+  - [x] 搜索页面路由
 
-#### 工具函数 (1/5)
+#### 工具函数 (4/5) ✅
 - [x] HTTP 请求 (`src/utils/request.ts`)
-- [ ] 日期格式化 (`src/utils/date.ts`)
-- [ ] 本地存储 (`src/utils/storage.ts`)
-- [ ] 格式化工具 (`src/utils/format.ts`)
+- [x] 日期格式化 (`src/utils/date.ts`)
+- [x] 本地存储 (`src/utils/storage.ts`)
+- [x] 格式化工具 (`src/utils/format.ts`)
+- [x] 工具统一导出 (`src/utils/index.ts`)
 - [ ] 验证工具 (`src/utils/validator.ts`)
 
 ---
@@ -237,28 +261,40 @@ gantt
 
 ### 本周任务 (2025-11-18 ~ 2025-11-24)
 
-#### 优先级 P0
-1. [ ] 完成 API 接口层封装
-   - [ ] chatlog.ts - 聊天记录接口
-   - [ ] session.ts - 会话管理接口
-   - [ ] contact.ts - 联系人接口
-2. [ ] 实现核心 Store
-   - [ ] app.ts - 应用状态
-   - [ ] chat.ts - 聊天状态
-   - [ ] session.ts - 会话状态
+#### 优先级 P0 ✅
+1. [x] 完成 API 接口层封装
+   - [x] chatlog.ts - 聊天记录接口
+   - [x] session.ts - 会话管理接口
+   - [x] contact.ts - 联系人接口
+   - [x] media.ts - 多媒体接口
+   - [x] index.ts - 统一导出
+2. [x] 实现核心 Store
+   - [x] app.ts - 应用状态
+   - [x] chat.ts - 聊天状态
+   - [x] session.ts - 会话状态
+   - [x] contact.ts - 联系人状态
+   - [x] index.ts - 统一导出
 
-#### 优先级 P1
-3. [ ] 配置路由系统
-4. [ ] 完善工具函数
-   - [ ] date.ts - 日期处理
-   - [ ] storage.ts - 本地存储
-   - [ ] format.ts - 格式化
+#### 优先级 P1 ✅
+3. [x] 配置路由系统
+4. [x] 完善工具函数
+   - [x] date.ts - 日期处理（499 行）
+   - [x] storage.ts - 本地存储（351 行）
+   - [x] format.ts - 格式化（470 行）
+   - [x] index.ts - 统一导出
+5. [ ] 开始开发 UI 组件
+   - [ ] 布局组件
+   - [ ] 会话列表组件
+   - [ ] 消息列表组件
 
-### 下周计划 (2025-11-25 ~ 2025-12-01)
+### 下周计划 (2025-11-18 ~ 2025-11-24)
+- [x] 完善工具函数（date, storage, format）
+- [x] 修复 Sass 弃用警告（使用现代 API）
 - [ ] 开发主布局组件
 - [ ] 实现侧边栏导航
 - [ ] 开发会话列表组件
 - [ ] 开始消息显示组件
+- [ ] 集成 API 和 Store 到 UI
 
 ---
 
@@ -281,7 +317,29 @@ gantt
 - ✅ 类型定义完成
 - ✅ HTTP 请求封装完成
 - ✅ 项目文档完成（用户手册、开发指南、产品设计、API文档）
-- 📝 下一步：开始 API 接口层开发
+- ✅ API 接口层开发完成
+  - ✅ chatlog.ts - 聊天记录 API（186 行）
+  - ✅ session.ts - 会话管理 API（174 行）
+  - ✅ contact.ts - 联系人 API（251 行）
+  - ✅ media.ts - 多媒体 API（289 行）
+  - ✅ index.ts - 统一导出
+- ✅ 状态管理开发完成
+  - ✅ app.ts - 应用状态（已存在，完善）
+  - ✅ chat.ts - 聊天状态（542 行）
+  - ✅ session.ts - 会话状态（563 行）
+  - ✅ contact.ts - 联系人状态（593 行）
+  - ✅ index.ts - 统一导出
+- ✅ 路由配置完成
+- ✅ 工具函数完成
+  - ✅ date.ts - 日期时间处理（499 行）
+  - ✅ storage.ts - 本地存储（351 行）
+  - ✅ format.ts - 格式化工具（470 行）
+  - ✅ index.ts - 统一导出
+- ✅ 配置优化
+  - ✅ 修复 Sass 弃用警告（使用现代 API）
+  - ✅ 修复所有 TypeScript 类型错误
+  - ✅ 类型检查通过（0 错误）
+- 📝 下一步：开始 UI 组件开发，连接数据层
 
 ### 技术决策
 - **前端框架**: Vue 3 (Composition API)
@@ -301,11 +359,16 @@ gantt
 
 ### 当前代码量
 ```
-文件数量: 25+
-代码行数: ~2000 行
-类型定义: 5 个文件
-工具函数: 1 个文件
+文件数量: 43+ 个
+代码行数: ~7,500 行
+类型定义: 5 个文件（~400 行）
+API 接口: 5 个文件（~1,000 行）
+状态管理: 5 个文件（~2,000 行）
+工具函数: 5 个文件（~1,400 行）
+路由: 1 个文件（~100 行）
 组件: 2 个文件
+视图: 4 个临时页面（~600 行）
+配置文件: 15+ 个
 ```
 
 ### 预计最终代码量（v1.0）
@@ -351,6 +414,68 @@ API 接口: ~15 个
 
 ---
 
-**最后更新**: 2025-11-17 15:30  
+**最后更新**: 2025-11-17 20:30  
 **更新人**: Development Team  
-**下次更新**: 2025-11-24
+**下次更新**: 2025-11-18
+
+---
+
+## 📝 最新进展
+
+### 2025-11-17 完成总结
+
+#### 下午 (14:00-18:00)
+1. ✅ **API 接口层 100% 完成**
+   - 实现了 4 个完整的 API 模块
+   - 总计约 900 行代码
+   - 覆盖所有后端接口
+
+2. ✅ **状态管理 100% 完成**
+   - 实现了 4 个核心 Store
+   - 总计约 1,700 行代码
+   - 完整的状态管理体系
+
+#### 晚上 (18:00-20:30)
+3. ✅ **工具函数 100% 完成**
+   - date.ts - 日期时间处理（499 行，20+ 个函数）
+   - storage.ts - 本地存储（351 行，完整的 Storage 类）
+   - format.ts - 格式化工具（470 行，25+ 个函数）
+   - index.ts - 统一导出和快捷方法
+
+4. ✅ **类型系统完善**
+   - 修复所有 TypeScript 类型错误
+   - 完善 Message、Session、Contact 类型定义
+   - 类型检查通过（0 错误）
+
+5. ✅ **配置优化**
+   - 修复 Sass 弃用警告（使用 modern-compiler API）
+   - 将 @import 改为 @use（现代 Sass 语法）
+   - 更新 Vite 配置支持新 API
+
+6. ✅ **项目进度从 35% 提升至 40%**
+   - 核心功能层全部完成
+   - 工具函数体系完整
+   - 为 UI 开发打好坚实基础
+
+### 技术亮点总结
+- **日期工具**: 支持相对时间、消息时间、会话时间等 10+ 种格式
+- **存储工具**: 支持过期时间、加密、空间管理等高级特性
+- **格式化工具**: 涵盖文件大小、数字、百分比、消息预览等 20+ 种格式
+- **类型安全**: 完整的 TypeScript 类型定义，0 类型错误
+- **现代化**: 使用最新的 Sass API，避免未来弃用问题
+
+### 下一步行动（优先级）
+1. **P0 - UI 组件开发**
+   - 主布局组件（DefaultLayout）
+   - 会话列表组件（SessionList, SessionItem）
+   - 消息列表组件（MessageList, MessageBubble）
+   
+2. **P1 - 数据集成**
+   - 连接 API + Store + UI
+   - 实现真实数据加载
+   - 添加加载状态和错误处理
+
+3. **P2 - 功能实现**
+   - 会话切换和消息加载
+   - 消息搜索和筛选
+   - 多媒体资源展示
