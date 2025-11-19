@@ -109,14 +109,14 @@ const testApiConnection = async () => {
   try {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 5000)
-    
+
     const response = await fetch(`${settings.value.apiBaseUrl}/health`, {
       method: 'GET',
       signal: controller.signal
     })
-    
+
     clearTimeout(timeoutId)
-    
+
     if (response.ok) {
       ElMessage.success('API 连接成功')
     } else {
@@ -628,10 +628,7 @@ const goBack = () => {
                   <el-icon><Refresh /></el-icon>
                   检查更新
                 </el-button>
-                <el-button @click="$router.push('/test')">
-                  <el-icon><Monitor /></el-icon>
-                  API 测试
-                </el-button>
+
               </div>
             </div>
           </div>
