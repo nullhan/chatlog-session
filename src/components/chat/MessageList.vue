@@ -60,7 +60,14 @@ const loadMessages = async (loadMore = false) => {
     // 如果是首次加载，滚动到底部
     if (!loadMore) {
       await nextTick()
-      scrollToBottom()
+      // 使用多次延迟确保 DOM 完全渲染后再滚动
+      setTimeout(() => {
+        scrollToBottom()
+        // 再次确保滚动到底部（处理图片等异步加载）
+        setTimeout(() => {
+          scrollToBottom()
+        }, 200)
+      }, 50)
     }
   } catch (err) {
     error.value = err instanceof Error ? err.message : '加载消息失败'
@@ -93,10 +100,19 @@ const handleLoadMore = async () => {
 const scrollToBottom = (smooth = false) => {
   if (!messageListRef.value) return
 
+  // 使用一个很大的数值确保滚动到底部
+  const containerScrollHeight = messageListRef.value.scrollHeight
+  const maxScroll = containerScrollHeight + 10000
+  
   messageListRef.value.scrollTo({
-    top: messageListRef.value.scrollHeight,
+    top: maxScroll,
     behavior: smooth ? 'smooth' : 'auto'
   })
+  
+  // 双保险：直接设置 scrollTop
+  if (!smooth) {
+    messageListRef.value.scrollTop = maxScroll
+  }
 }
 
 // 滚动到指定消息
@@ -176,8 +192,8 @@ const shouldShowName = (index: number, messages: Message[]) => {
 }
 
 // 监听会话ID变化
-watch(() => props.sessionId, (newId) => {
-  if (newId) {
+watch(() => props.sessionId, (newId, oldId) => {
+  if (newId && newId !== oldId) {
     hasMore.value = true
     loadMessages(false)
   }
@@ -315,6 +331,8 @@ defineExpose({
   position: relative;
   height: 100%;
   background-color: var(--el-bg-color-page);
+  display: flex;
+  flex-direction: column;
 
   &__loading,
   &__error,
@@ -338,7 +356,7 @@ defineExpose({
     height: 100%;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 16px 0;
+    padding: 16px 0 80px 0;
     scroll-behavior: smooth;
 
     &::-webkit-scrollbar {
@@ -389,10 +407,10 @@ defineExpose({
   }
 
   &__scroll-bottom {
-    position: absolute;
-    bottom: 24px;
-    right: 24px;
-    z-index: 10;
+    position: fixed;
+    bottom: 80px;
+    right: 40px;
+    z-index: 1000;
 
     .el-button {
       box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
