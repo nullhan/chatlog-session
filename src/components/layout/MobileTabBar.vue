@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import { useAppStore } from '@/stores/app'
 import { useSessionStore } from '@/stores/session'
 import { useContactStore } from '@/stores/contact'
@@ -72,7 +71,7 @@ const isActive = (key: string) => {
         <transition name="badge-scale">
           <el-badge
             v-if="tab.badge && typeof tab.badge() === 'number' && (tab.badge() as number) > 0"
-            :value="(tab.badge() as number) > 99 ? '99+' : tab.badge()"
+            :value="(tab.badge() as number) > 99 ? '99+' : (tab.badge() as number)"
             :max="99"
             class="tabbar-badge"
           />
