@@ -415,8 +415,33 @@ export const useChatStore = defineStore('chat', () => {
         })
       }
 
+      // 去重函数：判断两条消息是否完全一致
+      const isDuplicateMessage = (msg1: Message, msg2: Message): boolean => {
+        return msg1.seq === msg2.seq &&
+               msg1.time === msg2.time &&
+               msg1.talker === msg2.talker &&
+               msg1.sender === msg2.sender &&
+               msg1.type === msg2.type &&
+               msg1.content === msg2.content &&
+               JSON.stringify(msg1.contents) === JSON.stringify(msg2.contents)
+      }
+
+      // 过滤掉已存在的重复消息
+      const existingMessages = messages.value
+      const uniqueNewMessages = result.filter(newMsg => {
+        return !existingMessages.some(existingMsg => isDuplicateMessage(newMsg, existingMsg))
+      })
+
+      if (appStore.isDebug && uniqueNewMessages.length < result.length) {
+        console.log('🔍 Duplicate messages removed:', {
+          total: result.length,
+          unique: uniqueNewMessages.length,
+          duplicates: result.length - uniqueNewMessages.length
+        })
+      }
+
       // 追加到消息列表头部（历史消息在前）
-      messages.value = [...result, ...messages.value]
+      messages.value = [...uniqueNewMessages, ...messages.value]
 
       // 清除提示信息
       historyLoadMessage.value = ''
