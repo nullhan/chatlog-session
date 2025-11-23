@@ -47,6 +47,9 @@ export function useMessageContent(message: Message) {
   const isLiveMessage = computed(
     () => message.type === MESSAGE_TYPE.RICH && message.subType === RICH_MESSAGE_SUBTYPE.LIVE
   )
+  const isJielongMessage = computed(
+    () => message.type === MESSAGE_TYPE.RICH && message.subType === RICH_MESSAGE_SUBTYPE.JIELONG
+  )
   const isTransferMessage = computed(
     () => message.type === MESSAGE_TYPE.RICH && message.subType === RICH_MESSAGE_SUBTYPE.TRANSFER
   )
@@ -67,6 +70,7 @@ export function useMessageContent(message: Message) {
       !isShortVideoMessage.value &&
       !isPatMessage.value &&
       !isLiveMessage.value &&
+      !isJielongMessage.value &&
       !isTransferMessage.value &&
       !isRedPacketMessage.value
   )
@@ -109,6 +113,7 @@ export function useMessageContent(message: Message) {
     isShortVideoMessage,
     isPatMessage,
     isLiveMessage,
+    isJielongMessage,
     isTransferMessage,
     isRedPacketMessage,
     isOtherRichMessage,

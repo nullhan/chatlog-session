@@ -62,6 +62,18 @@ export function useMessageUrl(message: Message) {
     return ''
   })
 
+  // 语音 URL
+  const voiceUrl = computed(() => {
+    if (message.content) {
+      return message.content
+    }
+    if (message.contents?.voice) {
+      const apiBaseUrl = getApiBaseUrl()
+      return `${apiBaseUrl}/voice/${message.contents.voice}`
+    }
+    return ''
+  })
+
   // 文件 URL
   const fileUrl = computed(() => {
     if (message.content) {
@@ -117,6 +129,7 @@ export function useMessageUrl(message: Message) {
   return {
     imageUrl,
     videoUrl,
+    voiceUrl,
     emojiUrl,
     fileUrl,
     fileName,

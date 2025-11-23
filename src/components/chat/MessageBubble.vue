@@ -11,6 +11,7 @@ import { useMessageUrl } from './composables/useMessageUrl'
 import TextMessage from './message-types/TextMessage.vue'
 import ImageMessage from './message-types/ImageMessage.vue'
 import VideoMessage from './message-types/VideoMessage.vue'
+import VoiceMessage from './message-types/VoiceMessage.vue'
 import EmojiMessage from './message-types/EmojiMessage.vue'
 import FileMessage from './message-types/FileMessage.vue'
 import LinkMessage from './message-types/LinkMessage.vue'
@@ -19,6 +20,7 @@ import ShoppingMiniProgramMessage from './message-types/ShoppingMiniProgramMessa
 import ShortVideoMessage from './message-types/ShortVideoMessage.vue'
 import PatMessage from './message-types/PatMessage.vue'
 import LiveMessage from './message-types/LiveMessage.vue'
+import JielongMessage from './message-types/JielongMessage.vue'
 import ForwardedMessage from './message-types/ForwardedMessage.vue'
 import ForwardedDialog from './message-types/ForwardedDialog.vue'
 import RedPacketMessage from './message-types/RedPacketMessage.vue'
@@ -68,6 +70,7 @@ const {
   isShortVideoMessage,
   isPatMessage,
   isLiveMessage,
+  isJielongMessage,
   isTransferMessage,
   isRedPacketMessage,
   isOtherRichMessage,
@@ -80,6 +83,7 @@ const {
 const {
   imageUrl,
   videoUrl,
+  voiceUrl,
   emojiUrl,
   fileUrl,
   fileName,
@@ -214,12 +218,7 @@ const forwardedMessages = computed(() => {
   return dataItems
 })
 
-// 获取媒体消息的占位文本
-const getMediaPlaceholder = (type: number) => {
-  if (type === 34) return '[语音]'
-  if (type === 47) return '[表情]'
-  return '[媒体]'
-}
+
 </script>
 
 <template>
@@ -275,13 +274,13 @@ const getMediaPlaceholder = (type: number) => {
           />
 
           <!-- 语音消息 -->
-          <div v-else-if="isVoiceMessage" class="message-voice">
-            <template v-if="showMediaResources">
-              <el-icon class="voice-icon"><Microphone /></el-icon>
-              <span>{{ message.content || '语音消息' }}</span>
-            </template>
-            <span v-else class="media-placeholder">{{ getMediaPlaceholder(34) }}</span>
-          </div>
+          <VoiceMessage
+            v-else-if="isVoiceMessage"
+            :voice-url="voiceUrl"
+            :duration="message.duration"
+            :is-self="isSelf"
+            :show-media-resources="showMediaResources"
+          />
 
           <!-- 视频消息 -->
           <VideoMessage
@@ -409,6 +408,14 @@ const getMediaPlaceholder = (type: number) => {
           <LiveMessage
             v-else-if="isLiveMessage"
             :title="liveTitle"
+          />
+
+          <!-- 接龙消息 (type=49, subType=53) -->
+          <JielongMessage
+            v-else-if="isJielongMessage"
+            :content="message.content"
+            :contents="message.contents"
+            :show-media-resources="showMediaResources"
           />
 
           <!-- 转账消息 (type=49, subType=2000) -->
