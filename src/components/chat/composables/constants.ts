@@ -17,6 +17,7 @@ export const MESSAGE_TYPE = {
 // 富文本消息子类型
 export const RICH_MESSAGE_SUBTYPE = {
   QQMUSIC: 3,
+  VIDEO_LINK: 4,
   LINK: 5,
   FILE: 6,
   CARDPACKAGE: 16,
@@ -37,6 +38,7 @@ export const MESSAGE_TYPE_MAP: Record<string, string> = {
   '1': '文本',
   '2': '图片',
   '3': 'QQ音乐',
+  '4': '视频链接',
   '8': '文件',
   '16': '微信卡包',
   '33': '小程序',
@@ -58,6 +60,7 @@ export const MESSAGE_ICON_MAP: Record<string, string> = {
   '1': 'ChatLineSquare',
   '2': 'Picture',
   '3': 'Headset',
+  '4': 'VideoPlay',
   '8': 'Document',
   '16': 'Tickets',
   '33': 'Grid',

@@ -20,6 +20,9 @@ export function useMessageContent(message: Message) {
   const isQQMusicMessage = computed(
     () => message.type === MESSAGE_TYPE.RICH && message.subType === RICH_MESSAGE_SUBTYPE.QQMUSIC
   )
+  const isVideoLinkMessage = computed(
+    () => message.type === MESSAGE_TYPE.RICH && message.subType === RICH_MESSAGE_SUBTYPE.VIDEO_LINK
+  )
   const isCardPackageMessage = computed(
     () => message.type === MESSAGE_TYPE.RICH && message.subType === RICH_MESSAGE_SUBTYPE.CARDPACKAGE
   )
@@ -63,6 +66,7 @@ export function useMessageContent(message: Message) {
     () =>
       message.type === MESSAGE_TYPE.RICH &&
       !isQQMusicMessage.value &&
+      !isVideoLinkMessage.value &&
       !isCardPackageMessage.value &&
       !isReferMessage.value &&
       !isLinkMessage.value &&
@@ -109,6 +113,7 @@ export function useMessageContent(message: Message) {
     isGapMessage,
     isEmptyRangeMessage,
     isQQMusicMessage,
+    isVideoLinkMessage,
     isCardPackageMessage,
     isReferMessage,
     isLinkMessage,

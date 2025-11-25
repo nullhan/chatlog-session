@@ -63,6 +63,7 @@ const {
   isGapMessage,
   isEmptyRangeMessage,
   isQQMusicMessage,
+  isVideoLinkMessage,
   isCardPackageMessage,
   isReferMessage,
   isLinkMessage,
@@ -153,7 +154,12 @@ const handleLinkClick = () => {
   }
 }
 
-// 处理小程序点击
+const handleVideoLinkClick = () => {
+  if (linkUrl.value) {
+    window.open(linkUrl.value, '_blank')
+  }
+}
+
 const handleMiniProgramClick = () => {
   if (miniProgramUrl.value) {
     window.open(miniProgramUrl.value, '_blank')
@@ -385,13 +391,22 @@ const forwardedMessages = computed(() => {
             <div class="message-text">{{ message.content }}</div>
           </div>
 
-          <!-- 链接分享 (type=49, subType=5) -->
+          <!-- 链接消息 (type=49, subType=5) -->
           <LinkMessage
             v-else-if="isLinkMessage"
             :link-title="linkTitle"
             :link-url="linkUrl"
             :show-media-resources="showMediaResources"
             @click="handleLinkClick"
+          />
+
+          <!-- 视频链接消息 (type=49, subType=4) -->
+          <LinkMessage
+            v-else-if="isVideoLinkMessage"
+            :link-title="linkTitle"
+            :link-url="linkUrl"
+            :show-media-resources="showMediaResources"
+            @click="handleVideoLinkClick"
           />
 
           <!-- 小程序消息 (type=49, subType=33) -->
