@@ -1,4 +1,4 @@
-import { toCST } from "@/utils/timezone"
+import { toCST, formatCSTTime } from "@/utils/timezone"
 
 /**
  * 消息类型枚举
@@ -162,15 +162,9 @@ export function createEmptyRangeMessage(
   if( newestMsgTime){
     endDate = new Date(newestMsgTime)
   }
-  const formatDate = (date: Date) => {
-    const cstHours = (date.getUTCHours() + 8) % 24
-    const minutes = date.getUTCMinutes()
-    const seconds = date.getUTCSeconds()
-    return `${String(cstHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
-  }
 
-  const startStr = formatDate(startDate)
-  const endStr = formatDate(endDate)
+  const startStr = formatCSTTime(startDate)
+  const endStr = formatCSTTime(endDate)
 
   return {
     id: -Date.now() - 1000,
