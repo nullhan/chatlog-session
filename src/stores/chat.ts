@@ -49,39 +49,26 @@ export const useChatStore = defineStore('chat', () => {
 
   // 监听缓存更新事件
   const handleCacheUpdate = (event: CustomEvent) => {
+    if(appStore.isDebug){
+      console.log('🛎️ Chatlog cache updated event received:', event.detail)
+    }
     const { talker, messages: newMessages } = event.detail
 
     // 如果是当前打开的会话，更新消息列表
     if (talker === currentTalker.value) {
-      const oldCount = messages.value.length
-      const newCount = newMessages.length
+      // 找出新增的消息（基于 id 和 seq）
+      const existingIds = new Set(messages.value.map(m => `${m.id}_${m.seq}`))
+      const actualNewMessages = newMessages.filter((m: Message) => !existingIds.has(`${m.id}_${m.seq}`))
 
-      if (newCount > oldCount) {
-        // 找出新增的消息（基于 id 和 seq）
-        const existingIds = new Set(messages.value.map(m => `${m.id}_${m.seq}`))
-        const actualNewMessages = newMessages.filter((m: Message) => !existingIds.has(`${m.id}_${m.seq}`))
+      if (actualNewMessages.length > 0) {
+        // 只添加新消息到末尾
+        messages.value = [...messages.value, ...actualNewMessages]
 
-        if (actualNewMessages.length > 0) {
-          // 只添加新消息到末尾
-          messages.value = [...messages.value, ...actualNewMessages]
-
-          if (appStore.isDebug) {
-            console.log(`🔄 Auto-updated messages for current session: ${talker}`, {
-              oldCount,
-              newCount,
-              newMessagesCount: actualNewMessages.length
-            })
-          }
-        } else if (newCount !== oldCount) {
-          // 如果数量不同但没有新消息，说明可能有消息被删除或修改，全量更新
-          messages.value = newMessages
-
-          if (appStore.isDebug) {
-            console.log(`🔄 Full refresh messages for current session: ${talker}`, {
-              oldCount,
-              newCount
-            })
-          }
+        if (appStore.isDebug) {
+          console.log(`🔄 Auto-updated messages for current session: ${talker}`, {
+            existingCount: messages.value.length - actualNewMessages.length,
+            newMessagesCount: actualNewMessages.length
+          })
         }
       }
     }

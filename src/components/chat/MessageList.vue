@@ -500,6 +500,11 @@ defineExpose({
           :show-name="shouldShowName(index, messages)"
         />
       </template>
+
+      <!-- 底部提示 -->
+      <div class="message-list__bottom-hint">
+        <el-divider>到了底部</el-divider>
+      </div>
     </div>
 
     <!-- 滚动到底部按钮 -->
@@ -573,6 +578,7 @@ defineExpose({
 
   &__load-more,
   &__no-more,
+  &__bottom-hint,
   &__loading-history,
   &__history-message {
     text-align: center;
@@ -612,7 +618,8 @@ defineExpose({
     }
   }
 
-  &__no-more {
+  &__no-more,
+  &__bottom-hint {
     .el-divider {
       margin: 0;
 
