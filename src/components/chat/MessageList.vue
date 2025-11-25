@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, watch } from 'vue'
 import { useChatStore } from '@/stores/chat'
+import { formatMinimalDate } from '@/utils/date'
 import type { Message } from '@/types'
 import MessageBubble from './MessageBubble.vue'
 
@@ -211,7 +212,7 @@ const handleLoadMore = async () => {
           autoLoadCount: autoLoadCount.value,
           maxAutoLoad
         })
-        
+
         // 等待一小段时间后继续加载
         await nextTick()
         setTimeout(() => {
@@ -466,24 +467,24 @@ defineExpose({
       <!-- 按日期分组显示 -->
       <template v-if="showDate">
         <div
-          v-for="(group, date) in messagesByDate"
-          :key="date"
+          v-for="group in messagesByDate"
+          :key="group.date"
           class="message-group"
         >
           <!-- 日期分隔符 -->
-          <div class="message-date">
-            <span>{{ date }} ({{ group.length }} 条)</span>
+          <div class="message-date" @click="scrollToMessage(group.messages[0].id)">
+            <span>{{ group.formattedDate }} ({{ group.messages.length }} 条)</span>
           </div>
 
           <!-- 消息列表 -->
           <MessageBubble
-            v-for="(message, index) in group"
+            v-for="(message, index) in group.messages"
             :id="`message-${message.id}`"
             :key="message.id"
             :message="message"
-            :show-avatar="shouldShowAvatar(index, group)"
-            :show-time="shouldShowTime(index, group)"
-            :show-name="shouldShowName(index, group)"
+            :show-avatar="shouldShowAvatar(index, group.messages)"
+            :show-time="shouldShowTime(index, group.messages)"
+            :show-name="shouldShowName(index, group.messages)"
           />
         </div>
       </template>
@@ -513,6 +514,24 @@ defineExpose({
         v-show="messages.length > 0"
         class="message-list__scroll-bottom"
       >
+        <!-- 日期快速跳转 -->
+        <div v-if="showDate" class="date-nav">
+          <div
+            v-for="group in messagesByDate"
+            :key="group.date"
+            class="date-nav__item"
+            @click.stop="scrollToMessage(group.messages[0].id)"
+          >
+            <el-tooltip
+              :content="`${group.formattedDate} (${group.messages.length}条)`"
+              placement="left"
+              :show-after="200"
+            >
+              <span>{{ formatMinimalDate(group.date) }}</span>
+            </el-tooltip>
+          </div>
+        </div>
+
         <el-button
           circle
           size="small"
@@ -636,14 +655,54 @@ defineExpose({
     bottom: 80px;
     right: 40px;
     z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
 
-    .el-button {
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
-      background-color: var(--el-bg-color);
+    .date-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 4px;
+      max-height: 60vh;
+      overflow-y: auto;
+      padding: 4px;
 
-      &:hover {
-        background-color: var(--el-bg-color);
+      &::-webkit-scrollbar {
+        width: 0;
+        display: none;
       }
+
+      &__item {
+        font-size: 11px;
+        background-color: var(--el-bg-color);
+        border: 1px solid var(--el-border-color-lighter);
+        border-radius: 12px;
+        padding: 4px 8px;
+        cursor: pointer;
+        white-space: nowrap;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        transition: all 0.2s;
+        opacity: 0.7;
+        color: var(--el-text-color-secondary);
+        text-align: center;
+
+        &:hover {
+          opacity: 1;
+          color: var(--el-color-primary);
+          border-color: var(--el-color-primary-light-5);
+          transform: translateX(-2px);
+          box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+        }
+      }
+    }
+
+    .scroll-btn {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      width: 40px;
+      height: 40px;
+      font-size: 18px;
     }
   }
 }
@@ -660,6 +719,17 @@ defineExpose({
   z-index: 1;
   backdrop-filter: blur(10px);
   background-color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: background-color 0.3s;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.95);
+
+    span {
+      background-color: var(--el-color-primary-light-9);
+      color: var(--el-color-primary);
+    }
+  }
 
   span {
     display: inline-block;
@@ -668,6 +738,7 @@ defineExpose({
     border-radius: 12px;
     font-size: 12px;
     color: var(--el-text-color-secondary);
+    transition: all 0.3s;
   }
 }
 

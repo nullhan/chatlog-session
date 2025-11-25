@@ -11,6 +11,7 @@ import { useAppStore } from './app'
 import { useMessageCacheStore } from './messageCache'
 import { useAutoRefreshStore } from './autoRefresh'
 import { toCST, formatCSTRange, subtractDays } from '@/utils/timezone'
+import { formatDateGroup, formatDate } from '@/utils/date'
 
 /**
  * 获取消息列表中最新消息的东八区时间
@@ -167,41 +168,57 @@ export const useChatStore = defineStore('chat', () => {
   })
 
   /**
-   * 按日期分组的消息
+   * 按日期分组的消息, 返回一个对象数组
+   * [{ date: '2023-11-11', formattedDate: '昨天', messages: [...] }]
    */
   const messagesByDate = computed(() => {
-    const grouped: Record<string, Message[]> = {}
+    const grouped: Record<string, { formattedDate: string, messages: Message[] }> = {}
 
     currentMessages.value.forEach(message => {
       // 优先使用 time（ISO 字符串），回退到 createTime（Unix 秒）
       const timestamp = message.time || message.createTime
 
       // 调试日志
-      if (appStore.isDebug && (!message.time && !message.createTime)) {
+      if (appStore.isDebug && !timestamp) {
         console.warn('⚠️ Message missing time fields:', {
           id: message.id,
           seq: message.seq,
           time: message.time,
           createTime: message.createTime,
         })
+        return // 跳过没有时间戳的消息
       }
 
-      const date = formatMessageDate(timestamp)
-
-      if (appStore.isDebug && date === '未知日期') {
-        console.warn('⚠️ Invalid date format:', {
-          timestamp,
-          message,
-        })
+      // 解析日期对象
+      const dateObj = typeof timestamp === 'string'
+        ? new Date(timestamp)
+        : new Date(timestamp < 10000000000 ? timestamp * 1000 : timestamp)
+      
+      if (isNaN(dateObj.getTime())) {
+        if (appStore.isDebug) {
+          console.warn('⚠️ Invalid date format:', { timestamp, message })
+        }
+        return // 跳过无效日期的消息
       }
 
-      if (!grouped[date]) {
-        grouped[date] = []
+      const canonicalDate = formatDate(dateObj) // YYYY-MM-DD
+      const formattedDate = formatDateGroup(timestamp)
+
+      if (!grouped[canonicalDate]) {
+        grouped[canonicalDate] = {
+          formattedDate,
+          messages: []
+        }
       }
-      grouped[date].push(message)
+      grouped[canonicalDate].messages.push(message)
     })
 
-    return grouped
+    // 转换为数组并返回
+    return Object.entries(grouped).map(([date, data]) => ({
+      date,
+      formattedDate: data.formattedDate,
+      messages: data.messages
+    }))
   })
 
   /**
@@ -389,7 +406,7 @@ export const useChatStore = defineStore('chat', () => {
    * 加载更多消息
    */
   async function loadMoreMessages() {
-    console.error('loadMoreMessages called')
+    console.warn('loadMoreMessages called')
     if (!hasMore.value || loading.value || !currentTalker.value) {
       return
     }
@@ -956,51 +973,7 @@ export const useChatStore = defineStore('chat', () => {
     return stats
   }
 
-  /**
-   * 格式化消息日期
-   * @param timestamp Unix 时间戳（秒）或 ISO 8601 字符串
-   */
-  function formatMessageDate(timestamp: number | string): string {
-    // 处理无效值
-    if (!timestamp) {
-      return '未知日期'
-    }
 
-    // 如果是字符串，解析为 Date；如果是数字，假设是秒级时间戳
-    const date = typeof timestamp === 'string'
-      ? new Date(timestamp)
-      : new Date(timestamp * 1000)
-
-    // 检查日期是否有效
-    if (isNaN(date.getTime())) {
-      return '未知日期'
-    }
-
-    const today = new Date()
-    const yesterday = new Date(today)
-    yesterday.setDate(yesterday.getDate() - 1)
-
-    if (isSameDay(date, today)) {
-      return '今天'
-    } else if (isSameDay(date, yesterday)) {
-      return '昨天'
-    } else if (date.getFullYear() === today.getFullYear()) {
-      return `${date.getMonth() + 1}月${date.getDate()}日`
-    } else {
-      return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`
-    }
-  }
-
-  /**
-   * 判断是否为同一天
-   */
-  function isSameDay(date1: Date, date2: Date): boolean {
-    return (
-      date1.getFullYear() === date2.getFullYear() &&
-      date1.getMonth() === date2.getMonth() &&
-      date1.getDate() === date2.getDate()
-    )
-  }
 
   /**
    * 清除错误
@@ -1092,7 +1065,6 @@ export const useChatStore = defineStore('chat', () => {
     exportSelectedMessages,
     setPlayingVoice,
     getMessageStats,
-    formatMessageDate,
     clearError,
     $reset,
     cleanup,

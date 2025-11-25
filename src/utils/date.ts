@@ -219,11 +219,19 @@ export function formatSessionTime(timestamp: number): string {
  * 格式化日期分组标题
  * 用于消息列表中按日期分组的标题
  */
-export function formatDateGroup(timestamp: number): string {
+export function formatDateGroup(timestamp: number | string): string {
   if (!timestamp) return ''
 
-  const ms = timestamp < 10000000000 ? timestamp * 1000 : timestamp
-  const date = new Date(ms)
+  // 支持 ISO 8601 字符串或 Unix 时间戳
+  const date = typeof timestamp === 'string'
+    ? new Date(timestamp)
+    : new Date(timestamp < 10000000000 ? timestamp * 1000 : timestamp)
+
+  // 检查日期是否有效
+  if (isNaN(date.getTime())) {
+    return '未知日期'
+  }
+
   const now = new Date()
 
   // 今天
@@ -473,6 +481,48 @@ export function getTimeDiff(timestamp: number): string {
 }
 
 /**
+ * 格式化极简日期
+ * 规则：能用一个汉字、一个数字就绝不用 2 个
+ * 用于日期导航栏
+ */
+export function formatMinimalDate(dateStr: string): string {
+  if (!dateStr) return ''
+
+  // 尝试解析日期
+  const timestamp = parseTimeString(dateStr)
+  // 如果解析失败（如已经是中文描述），或者是时间范围数组
+  if (typeof timestamp !== 'number' || isNaN(timestamp)) {
+    return String(dateStr).length > 5 ? String(dateStr).slice(5) : String(dateStr)
+  }
+
+  const date = new Date(timestamp * 1000)
+  const now = new Date()
+
+  // 今天 -> 今
+  if (isSameDay(date, now)) return '今'
+
+  // 昨天 -> 昨
+  const yesterday = new Date(now)
+  yesterday.setDate(yesterday.getDate() - 1)
+  if (isSameDay(date, yesterday)) return '昨'
+
+  // 本周 -> 周X
+  if (isThisWeek(date)) {
+    const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+    return weekdays[date.getDay()]
+  }
+
+  // 今年 -> M.D
+  if (date.getFullYear() === now.getFullYear()) {
+    return `${date.getMonth() + 1}.${date.getDate()}`
+  }
+
+  // 往年 -> YY.M.D
+  const year = date.getFullYear() % 100
+  return `${year}.${date.getMonth() + 1}.${date.getDate()}`
+}
+
+/**
  * 默认导出
  */
 export default {
@@ -498,4 +548,5 @@ export default {
   parseTimeString,
   getDateRange,
   getTimeDiff,
+  formatMinimalDate,
 }
