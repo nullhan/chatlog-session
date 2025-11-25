@@ -48,9 +48,10 @@ const getMessageTypeLabel = (dataType: string): string => {
   const typeMap: Record<string, string> = {
     '1': '文本',
     '2': '图片',
-    '3': '图片',
-    '4': '语音',
+    '3': '语音',
+    '4': '视频',
     '5': '视频',
+    '6': '位置',
     '8': '文件',
     '34': '语音',
     '43': '视频',
@@ -64,9 +65,10 @@ const getMessageIcon = (dataType: string): string => {
   const iconMap: Record<string, string> = {
     '1': 'ChatLineSquare',
     '2': 'Picture',
-    '3': 'Picture',
-    '4': 'Microphone',
+    '3': 'Microphone',
+    '4': 'VideoPlay',
     '5': 'VideoPlay',
+    '6': 'Location',
     '8': 'Document',
     '34': 'Microphone',
     '43': 'VideoPlay',
@@ -109,10 +111,10 @@ const getThumbnailUrl = (item: ForwardedDataItem): string => {
           class="forwarded-item"
         >
           <div class="forwarded-item-header">
-            <Avatar 
+            <Avatar
               :src="item.SourceHeadURL"
-              :name="item.SourceName" 
-              :size="36" 
+              :name="item.SourceName"
+              :size="36"
             />
             <div class="forwarded-item-info">
               <div class="forwarded-item-sender">{{ item.SourceName }}</div>
@@ -158,9 +160,9 @@ const getThumbnailUrl = (item: ForwardedDataItem): string => {
               </div>
             </div>
 
-            <!-- 语音消息 (DataType=4,34) -->
+            <!-- 语音消息 (DataType=3,34) -->
             <div
-              v-else-if="item.DataType === '4' || item.DataType === '34'"
+              v-else-if="item.DataType === '3' || item.DataType === '34'"
               class="forwarded-voice"
             >
               <el-icon class="voice-icon"><Microphone /></el-icon>
@@ -172,19 +174,44 @@ const getThumbnailUrl = (item: ForwardedDataItem): string => {
               </div>
             </div>
 
-            <!-- 视频消息 (DataType=5,43) -->
+            <!-- 视频消息 (DataType=4,5,43) -->
             <div
-              v-else-if="item.DataType === '5' || item.DataType === '43'"
+              v-else-if="item.DataType === '4' || item.DataType === '5' || item.DataType === '43'"
               class="forwarded-video"
             >
-              <el-icon class="video-icon"><VideoPlay /></el-icon>
-              <div class="video-info">
-                <div class="video-title">
-                  {{ item.DataTitle || '[视频]' }}
+              <div v-if="getThumbnailUrl(item)" class="video-thumbnail">
+                <el-image
+                  :src="getThumbnailUrl(item)"
+                  :preview-src-list="[getImageUrl(item)]"
+                  fit="cover"
+                  lazy
+                >
+                  <template #placeholder>
+                    <div class="video-play-icon">
+                      <el-icon size="40"><VideoPlay /></el-icon>
+                    </div>
+                  </template>
+                  <template #error>
+                    <div class="image-error">
+                      <el-icon><Picture /></el-icon>
+                      <span>视频</span>
+                    </div>
+                  </template>
+                </el-image>
+                <div class="video-play-icon">
+                  <el-icon size="40"><VideoPlay /></el-icon>
                 </div>
-                <span v-if="item.DataSize" class="media-size">
-                  {{ formatFileSize(parseInt(item.DataSize)) }}
-                </span>
+              </div>
+              <div v-else class="video-placeholder">
+                <el-icon class="video-icon"><VideoPlay /></el-icon>
+                <div class="video-info">
+                  <div class="video-title">
+                    {{ item.DataTitle || '[视频]' }}
+                  </div>
+                  <span v-if="item.DataSize" class="media-size">
+                    {{ formatFileSize(parseInt(item.DataSize)) }}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -204,12 +231,12 @@ const getThumbnailUrl = (item: ForwardedDataItem): string => {
               </div>
             </div>
 
-            <!-- 位置消息 (DataType=48) -->
-            <div v-else-if="item.DataType === '48'" class="forwarded-location">
+            <!-- 位置消息 (DataType=6,48) -->
+            <div v-else-if="item.DataType === '6' || item.DataType === '48'" class="forwarded-location">
               <el-icon class="location-icon"><Location /></el-icon>
               <div class="location-info">
                 <div class="location-label">
-                  {{ item.Location?.Label || item.Location?.PoiName || '[位置]' }}
+                  {{ item.DataTitle || item.Location?.Label || item.Location?.PoiName || '[位置]' }}
                 </div>
                 <div v-if="item.Location?.Lat && item.Location?.Lng" class="location-coords">
                   {{ item.Location.Lat }}, {{ item.Location.Lng }}
@@ -386,12 +413,44 @@ const getThumbnailUrl = (item: ForwardedDataItem): string => {
 
   // 视频消息
   .forwarded-video {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px;
-    background-color: var(--el-fill-color);
-    border-radius: 6px;
+    .video-thumbnail {
+      position: relative;
+      width: 200px;
+      height: 200px;
+      border-radius: 8px;
+      overflow: hidden;
+      cursor: pointer;
+
+      .el-image {
+        width: 100%;
+        height: 100%;
+      }
+
+      .video-play-icon {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: white;
+        background-color: rgba(0, 0, 0, 0.4);
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+      }
+    }
+
+    .video-placeholder {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background-color: var(--el-fill-color);
+      border-radius: 6px;
+    }
 
     .video-icon {
       font-size: 32px;
@@ -409,11 +468,6 @@ const getThumbnailUrl = (item: ForwardedDataItem): string => {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-      }
-
-      .media-size {
-        font-size: 12px;
-        color: var(--el-text-color-secondary);
       }
     }
   }

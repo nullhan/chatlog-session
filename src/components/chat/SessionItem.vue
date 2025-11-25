@@ -40,7 +40,7 @@ const lastMessagePreview = computed(() => {
   const msg = props.session.lastMessage
   if (!msg) return '[不支持的消息类型]'
 
-  let content = msg.content || '[非文本消息]'
+  const content = msg.content || '[非文本消息]'
 
   return msg.nickName ? `${msg.nickName}: ${content}` : content
 })
