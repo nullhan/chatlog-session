@@ -93,8 +93,6 @@ export const useSessionStore = defineStore('session', () => {
     if (filterType.value !== 'all') {
       if (filterType.value === 'chat') {
         result = result.filter(s => s.type === 'private' || s.type === 'group')
-      } else if (filterType.value === 'starred') {
-        result = result.filter(s => s.isPinned)
       } else {
         result = result.filter(s => s.type === filterType.value)
       }

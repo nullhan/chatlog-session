@@ -43,8 +43,6 @@ const sessionList = computed(() => {
   // 按类型筛选
   if (props.filterType === 'chat') {
     list = list.filter(s => s.type === 'private' || s.type === 'group')
-  } else if (props.filterType === 'starred') {
-    list = list.filter(s => s.isPinned)
   } else if (props.filterType === 'private') {
     list = sessionStore.privateSessions
   } else if (props.filterType === 'group') {
