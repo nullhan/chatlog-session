@@ -8,7 +8,7 @@ import SessionItem from './SessionItem.vue'
 
 interface Props {
   searchText?: string
-  filterType?: 'all' | 'private' | 'group' | 'official' | 'unknown'
+  filterType?: 'chat' | 'private' | 'group' | 'official' | 'all'
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -33,19 +33,22 @@ const silentRefreshing = ref(false)
 // 排序方式
 const sortType = ref<'time' | 'name' | 'unread'>('time')
 
+// 置顶会话折叠状态
+const isPinnedCollapsed = ref(false)
+
 // 计算会话列表
 const sessionList = computed(() => {
   let list = sessionStore.sessions
 
   // 按类型筛选
-  if (props.filterType === 'private') {
+  if (props.filterType === 'chat') {
+    list = list.filter(s => s.type === 'private' || s.type === 'group')
+  } else if (props.filterType === 'private') {
     list = sessionStore.privateSessions
   } else if (props.filterType === 'group') {
     list = sessionStore.groupSessions
   } else if (props.filterType === 'official') {
     list = sessionStore.officialSessions
-  } else if (props.filterType === 'unknown') {
-    list = sessionStore.unknownSessions
   }
 
   // 搜索过滤
@@ -110,15 +113,15 @@ const silentRefresh = async () => {
   try {
     // 保存当前选中的会话 ID
     const currentId = activeSessionId.value
-    
+
     // 后台加载新数据
     await sessionStore.loadSessions()
-    
+
     // 恢复选中状态（如果之前有选中）
     if (currentId && sessionStore.currentSessionId !== currentId) {
       sessionStore.currentSessionId = currentId
     }
-    
+
     // 清除错误状态（刷新成功）
     error.value = null
   } catch (err) {
@@ -237,11 +240,11 @@ defineExpose({
       <el-button text size="small" :loading="silentRefreshing" @click="handleRefresh">
         <el-icon><Refresh /></el-icon>
       </el-button>
-      
+
       <!-- 后台刷新指示器（非侵入式） -->
-      <el-tooltip 
-        v-if="silentRefreshing && sessionList.length > 0" 
-        content="正在刷新..." 
+      <el-tooltip
+        v-if="silentRefreshing && sessionList.length > 0"
+        content="正在刷新..."
         placement="left"
       >
         <el-icon class="refreshing-indicator" :size="12">
@@ -296,18 +299,25 @@ defineExpose({
     <div v-else class="session-list__content">
       <!-- 置顶会话 -->
       <div v-if="pinnedSessions.length > 0" class="session-group">
-        <div class="session-group__header">
-          <span>置顶会话</span>
+        <div class="session-group__header clickable" @click="isPinnedCollapsed = !isPinnedCollapsed">
+          <div class="header-left">
+            <el-icon class="collapse-icon" :class="{ 'is-collapsed': isPinnedCollapsed }">
+              <CaretBottom />
+            </el-icon>
+            <span>置顶会话</span>
+          </div>
           <el-tag size="small" type="warning">{{ pinnedSessions.length }}</el-tag>
         </div>
-        <SessionItem
-          v-for="session in pinnedSessions"
-          :key="session.id"
-          :session="session"
-          :active="session.id === activeSessionId"
-          @click="handleSelectSession"
-          @action="handleSessionAction"
-        />
+        <div v-show="!isPinnedCollapsed">
+          <SessionItem
+            v-for="session in pinnedSessions"
+            :key="session.id"
+            :session="session"
+            :active="session.id === activeSessionId"
+            @click="handleSelectSession"
+            @action="handleSessionAction"
+          />
+        </div>
       </div>
 
       <!-- 普通会话 -->
@@ -442,6 +452,32 @@ defineExpose({
 
     span {
       flex: 1;
+    }
+
+    &.clickable {
+      cursor: pointer;
+      user-select: none;
+      transition: background-color 0.2s;
+
+      &:hover {
+        background-color: var(--el-fill-color);
+      }
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      flex: 1;
+      gap: 4px;
+    }
+
+    .collapse-icon {
+      transition: transform 0.2s;
+      font-size: 12px;
+
+      &.is-collapsed {
+        transform: rotate(-90deg);
+      }
     }
   }
 }
