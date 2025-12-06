@@ -1,70 +1,71 @@
 import { computed } from 'vue'
 import type { Message } from '@/types'
-import { MESSAGE_TYPE, RICH_MESSAGE_SUBTYPE } from './constants'
+import { MessageType, RichMessageSubType } from '@/types/message'
 
 export function useMessageContent(message: Message) {
   // 消息内容类型判断
-  const isTextMessage = computed(() => message.type === MESSAGE_TYPE.TEXT)
-  const isImageMessage = computed(() => message.type === MESSAGE_TYPE.IMAGE)
-  const isVoiceMessage = computed(() => message.type === MESSAGE_TYPE.VOICE)
-  const isContactCardMessage = computed(() => message.type === MESSAGE_TYPE.CONTACT_CARD)
-  const isVideoMessage = computed(() => message.type === MESSAGE_TYPE.VIDEO)
-  const isEmojiMessage = computed(() => message.type === MESSAGE_TYPE.EMOJI)
-  const isLocationMessage = computed(() => message.type === MESSAGE_TYPE.LOCATION)
-  const isSystemMessage = computed(() => message.type === MESSAGE_TYPE.SYSTEM)
-  const isRevokeMessage = computed(() => message.type === MESSAGE_TYPE.REVOKE)
-  const isGapMessage = computed(() => message.type === MESSAGE_TYPE.GAP || message.isGap)
-  const isEmptyRangeMessage = computed(() => message.type === MESSAGE_TYPE.EMPTY_RANGE || message.isEmptyRange)
+  const isTextMessage = computed(() => message.type === MessageType.Text)
+  const isImageMessage = computed(() => message.type === MessageType.Image)
+  const isVoiceMessage = computed(() => message.type === MessageType.Voice)
+  const isContactCardMessage = computed(() => message.type === MessageType.ContactCard)
+  const isVideoMessage = computed(() => message.type === MessageType.Video)
+  const isEmojiMessage = computed(() => message.type === MessageType.Emoji)
+  const isLocationMessage = computed(() => message.type === MessageType.Location)
+  const isSystemMessage = computed(() => message.type === MessageType.System)
+  const isRevokeMessage = computed(() => message.type === MessageType.Revoke)
+  const isGapMessage = computed(() => message.type === MessageType.Gap || message.isGap)
+  const isEmptyRangeMessage = computed(() => message.type === MessageType.EmptyRange || message.isEmptyRange)
+  const isQQMailMessage = computed(() => message.type === MessageType.QQMail)
 
   // type=49 的各种子类型
   const isQQMusicMessage = computed(
-    () => message.type === MESSAGE_TYPE.RICH && message.subType === RICH_MESSAGE_SUBTYPE.QQMUSIC
+    () => message.type === MessageType.File && message.subType === RichMessageSubType.QQMusic
   )
   const isVideoLinkMessage = computed(
-    () => message.type === MESSAGE_TYPE.RICH && message.subType === RICH_MESSAGE_SUBTYPE.VIDEO_LINK
+    () => message.type === MessageType.File && message.subType === RichMessageSubType.VideoLink
   )
   const isCardPackageMessage = computed(
-    () => message.type === MESSAGE_TYPE.RICH && message.subType === RICH_MESSAGE_SUBTYPE.CARDPACKAGE
+    () => message.type === MessageType.File && message.subType === RichMessageSubType.CardPackage
   )
   const isReferMessage = computed(
-    () => message.type === MESSAGE_TYPE.RICH && message.subType === RICH_MESSAGE_SUBTYPE.REFER
+    () => message.type === MessageType.File && message.subType === RichMessageSubType.Refer
   )
   const isLinkMessage = computed(
-    () => message.type === MESSAGE_TYPE.RICH && message.subType === RICH_MESSAGE_SUBTYPE.LINK
+    () => message.type === MessageType.File && message.subType === RichMessageSubType.Link
   )
   const isForwardedMessage = computed(
-    () => message.type === MESSAGE_TYPE.RICH && message.subType === RICH_MESSAGE_SUBTYPE.FORWARDED
+    () => message.type === MessageType.File && message.subType === RichMessageSubType.Forwarded
   )
   const isFileMessage = computed(
-    () => message.type === MESSAGE_TYPE.RICH && message.subType === RICH_MESSAGE_SUBTYPE.FILE
+    () => message.type === MessageType.File && message.subType === RichMessageSubType.File
   )
   const isMiniProgramMessage = computed(
-    () => message.type === MESSAGE_TYPE.RICH && message.subType === RICH_MESSAGE_SUBTYPE.MINIPROGRAM
+    () => message.type === MessageType.File && message.subType === RichMessageSubType.MiniProgram
   )
   const isShoppingMiniProgramMessage = computed(
-    () => message.type === MESSAGE_TYPE.RICH && message.subType === RICH_MESSAGE_SUBTYPE.SHOPPINGMINIPROGRAM
+    () => message.type === MessageType.File && message.subType === RichMessageSubType.ShoppingMiniProgram
   )
   const isShortVideoMessage = computed(
-    () => message.type === MESSAGE_TYPE.RICH && message.subType === RICH_MESSAGE_SUBTYPE.SHORTVIDEO
+    () => message.type === MessageType.File && message.subType === RichMessageSubType.ShortVideo
   )
   const isPatMessage = computed(
-    () => message.type === MESSAGE_TYPE.RICH && message.subType === RICH_MESSAGE_SUBTYPE.PAT
+    () => message.type === MessageType.File && message.subType === RichMessageSubType.Pat
   )
   const isLiveMessage = computed(
-    () => message.type === MESSAGE_TYPE.RICH && message.subType === RICH_MESSAGE_SUBTYPE.LIVE
+    () => message.type === MessageType.File && message.subType === RichMessageSubType.Live
   )
   const isJielongMessage = computed(
-    () => message.type === MESSAGE_TYPE.RICH && message.subType === RICH_MESSAGE_SUBTYPE.JIELONG
+    () => message.type === MessageType.File && message.subType === RichMessageSubType.Jielong
   )
   const isTransferMessage = computed(
-    () => message.type === MESSAGE_TYPE.RICH && message.subType === RICH_MESSAGE_SUBTYPE.TRANSFER
+    () => message.type === MessageType.File && message.subType === RichMessageSubType.Transfer
   )
   const isRedPacketMessage = computed(
-    () => message.type === MESSAGE_TYPE.RICH && message.subType === RICH_MESSAGE_SUBTYPE.REDPACKET
+    () => message.type === MessageType.File && message.subType === RichMessageSubType.RedPacket
   )
   const isOtherRichMessage = computed(
     () =>
-      message.type === MESSAGE_TYPE.RICH &&
+      message.type === MessageType.File &&
       !isQQMusicMessage.value &&
       !isVideoLinkMessage.value &&
       !isCardPackageMessage.value &&
@@ -91,8 +92,8 @@ export function useMessageContent(message: Message) {
   const referMessageType = computed(() => {
     if (!referMessage.value) return null
     const refer = referMessage.value
-    if (refer.type === MESSAGE_TYPE.IMAGE) return 'image'
-    if (refer.type === MESSAGE_TYPE.RICH && refer.subType === RICH_MESSAGE_SUBTYPE.LINK)
+    if (refer.type === MessageType.Image) return 'image'
+    if (refer.type === MessageType.File && refer.subType === RichMessageSubType.Link)
       return 'link'
     return 'text'
   })
@@ -127,6 +128,7 @@ export function useMessageContent(message: Message) {
     isJielongMessage,
     isTransferMessage,
     isRedPacketMessage,
+    isQQMailMessage,
     isOtherRichMessage,
     referMessage,
     referMessageType,

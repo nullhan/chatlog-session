@@ -28,6 +28,7 @@ import RedPacketMessage from './message-types/RedPacketMessage.vue'
 import LocationMessage from './message-types/LocationMessage.vue'
 import ContactCardMessage from './message-types/ContactCardMessage.vue'
 import TransferMessage from './message-types/TransferMessage.vue'
+import QQMailMessage from './message-types/QQMailMessage.vue'
 import QQMusicMessage from './message-types/QQMusicMessage.vue'
 import CardPackageMessage from './message-types/CardPackageMessage.vue'
 
@@ -81,7 +82,8 @@ const {
   isOtherRichMessage,
   referMessage,
   referMessageType,
-  isSelf
+  isSelf,
+  isQQMailMessage
 } = useMessageContent(props.message)
 
 // 使用 URL 处理逻辑
@@ -373,6 +375,12 @@ const forwardedMessages = computed(() => {
             :cityname="locationCityname"
             :show-media-resources="showMediaResources"
             @click="handleLocationClick"
+          />
+
+          <!-- QQ邮箱消息 (type=35) -->
+          <QQMailMessage
+            v-else-if="isQQMailMessage"
+            :show-media-resources="showMediaResources"
           />
 
           <!-- QQ音乐消息 (type=49, subType=3) -->

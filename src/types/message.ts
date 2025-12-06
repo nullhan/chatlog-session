@@ -16,6 +16,28 @@ export enum MessageType {
   Revoke = 10002,
   Gap = 99999,
   EmptyRange = 99998,
+  QQMail = 35,
+}
+
+/**
+ * 富文本消息子类型枚举
+ */
+export enum RichMessageSubType {
+  QQMusic = 3,
+  VideoLink = 4,
+  Link = 5,
+  File = 6,
+  CardPackage = 16,
+  Forwarded = 19,
+  MiniProgram = 33,
+  ShoppingMiniProgram = 36,
+  ShortVideo = 51,
+  Jielong = 53,
+  Refer = 57,
+  Pat = 62,
+  Live = 63,
+  Transfer = 2000,
+  RedPacket = 2001,
 }
 
 /**
@@ -125,6 +147,7 @@ export const MessageTypeNames: Record<MessageType, string> = {
   [MessageType.Revoke]: '撤回消息',
   [MessageType.Gap]: '虚拟间隙消息',
   [MessageType.EmptyRange]: '虚拟空范围消息',
+  [MessageType.QQMail]: 'QQ邮箱消息',
 }
 
 /**
@@ -143,7 +166,64 @@ export const MessageTypeIcons: Record<MessageType, string> = {
   [MessageType.Revoke]: 'RefreshLeft',
   [MessageType.Gap]: 'MoreFilled',
   [MessageType.EmptyRange]: 'RemoveFilled',
+  [MessageType.QQMail]: 'Message',
 }
+
+/**
+ * 消息类型映射（字符串键版本）
+ */
+export const MessageTypeMap: Record<string, string> = {
+  '1': '文本',
+  '2': '图片',
+  '3': 'QQ音乐',
+  '4': '视频链接',
+  '8': '文件',
+  '16': '微信卡包',
+  '33': '小程序',
+  '34': '语音',
+  '35': 'QQ邮箱',
+  '36': '购物小程序',
+  '42': '个人名片',
+  '43': '视频',
+  '48': '位置',
+  '51': '小视频',
+  '53': '接龙',
+  '62': '拍一拍',
+  '63': '直播',
+  '2000': '转账',
+  '2001': '红包'
+}
+
+/**
+ * 消息图标映射（字符串键版本）
+ */
+export const MessageIconMap: Record<string, string> = {
+  '1': 'ChatLineSquare',
+  '2': 'Picture',
+  '3': 'Headset',
+  '4': 'VideoPlay',
+  '8': 'Document',
+  '16': 'Tickets',
+  '33': 'Grid',
+  '34': 'Microphone',
+  '35': 'Message',
+  '36': 'ShoppingCart',
+  '42': 'User',
+  '43': 'VideoPlay',
+  '48': 'Location',
+  '51': 'VideoCameraFilled',
+  '53': 'List',
+  '62': 'Pointer',
+  '63': 'VideoCamera',
+  '2000': 'Wallet',
+  '2001': 'Present'
+}
+
+/**
+ * 文件大小单位
+ */
+export const FileSizeUnits = ['B', 'KB', 'MB', 'GB'] as const
+export const FileSizeBase = 1024
 
 /**
  * 创建 EmptyRange 消息

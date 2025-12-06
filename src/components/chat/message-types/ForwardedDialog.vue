@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import Avatar from '@/components/common/Avatar.vue'
 import { formatFileSize } from '../composables/utils'
-import { MESSAGE_TYPE_MAP, MESSAGE_ICON_MAP } from '../composables/constants'
+import { MessageTypeMap, MessageIconMap } from '@/types/message'
 
 interface ForwardedDataItem {
   DataType: string
@@ -57,7 +57,7 @@ const getMessageTypeLabel = (dataType: string): string => {
     '43': '视频',
     '48': '位置',
   }
-  return typeMap[dataType] || MESSAGE_TYPE_MAP[dataType] || '未知消息'
+  return typeMap[dataType] || MessageTypeMap[dataType] || '未知消息'
 }
 
 // 获取消息类型图标
@@ -74,7 +74,7 @@ const getMessageIcon = (dataType: string): string => {
     '43': 'VideoPlay',
     '48': 'Location',
   }
-  return iconMap[dataType] || MESSAGE_ICON_MAP[dataType] || 'QuestionFilled'
+  return iconMap[dataType] || MessageIconMap[dataType] || 'QuestionFilled'
 }
 
 // 获取图片 URL（使用头像占位或实际图片）

@@ -1,12 +1,12 @@
-import { FILE_SIZE_BASE, FILE_SIZE_UNITS } from './constants'
+import { FileSizeBase, FileSizeUnits } from '@/types/message'
 
 /**
  * 格式化文件大小
  */
 export function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 B'
-  const i = Math.floor(Math.log(bytes) / Math.log(FILE_SIZE_BASE))
-  return Math.round((bytes / Math.pow(FILE_SIZE_BASE, i)) * 100) / 100 + ' ' + FILE_SIZE_UNITS[i]
+  const i = Math.floor(Math.log(bytes) / Math.log(FileSizeBase))
+  return Math.round((bytes / Math.pow(FileSizeBase, i)) * 100) / 100 + ' ' + FileSizeUnits[i]
 }
 
 /**
