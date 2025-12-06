@@ -3,6 +3,8 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useSessionStore } from '@/stores/session'
+import { useAutoRefreshStore } from '@/stores/autoRefresh'
+import { useAppStore } from '@/stores/app'
 import type { Session, SessionFilterType } from '@/types'
 import SessionItem from './SessionItem.vue'
 
@@ -22,6 +24,8 @@ const emit = defineEmits<{
 
 const router = useRouter()
 const sessionStore = useSessionStore()
+const autoRefreshStore = useAutoRefreshStore()
+const appStore = useAppStore()
 
 // 后台刷新状态（无感知刷新）
 const silentRefreshing = ref(false)
@@ -134,6 +138,39 @@ const handleRefresh = () => {
   }
 }
 
+// 自动刷新（包含会话列表刷新和消息刷新检测）
+const autoRefresh = async () => {
+  console.log('🔄 执行自动刷新会话列表...')
+
+  // 1. 刷新会话列表
+  handleRefresh()
+
+  // 2. 等待会话列表更新完成
+  await new Promise(resolve => setTimeout(resolve, 500))
+
+  // 3. 检测需要刷新消息的会话
+  if (autoRefreshStore.config.enabled) {
+    console.log('🔄 检测需要刷新消息的会话...')
+    try {
+      await autoRefreshStore.detectNeedsRefresh()
+
+      // 注意：detectNeedsRefresh 内部已经清空并重新填充 needsRefreshTalkers
+      // 所以这里的长度就是本次检测的结果
+      const needsRefreshCount = autoRefreshStore.needsRefreshTalkers.length
+
+      // 显示提示
+      if (appStore.isDebug && needsRefreshCount > 0) {
+        ElMessage.info({
+          message: `正在后台刷新 ${needsRefreshCount} 个会话的消息...`,
+          duration: 2000
+        })
+      }
+    } catch (error) {
+      console.error('❌ 检测需要刷新的会话失败:', error)
+    }
+  }
+}
+
 // 跳转到设置页面
 const goToSettings = () => {
   router.push('/settings')
@@ -155,7 +192,8 @@ onMounted(() => {
 defineExpose({
   refresh: handleRefresh,
   silentRefresh,
-  loadSessions
+  loadSessions,
+  autoRefresh
 })
 </script>
 

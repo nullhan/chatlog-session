@@ -205,37 +205,7 @@ const handleRefreshMessages = () => {
 }
 
 // 自动刷新数据（刷新会话列表 + 消息缓存）
-const autoRefresh = async () => {
-  console.log('🔄 执行自动刷新会话列表...')
-
-  // 1. 刷新会话列表
-  sessionListRef.value?.refresh()
-
-  // 2. 等待会话列表更新完成
-  await new Promise(resolve => setTimeout(resolve, 500))
-
-  // 3. 检测需要刷新消息的会话
-  if (autoRefreshStore.config.enabled) {
-    console.log('🔄 检测需要刷新消息的会话...')
-    try {
-      await autoRefreshStore.detectNeedsRefresh()
-
-      // 注意：detectNeedsRefresh 内部已经清空并重新填充 needsRefreshTalkers
-      // 所以这里的长度就是本次检测的结果
-      const needsRefreshCount = autoRefreshStore.needsRefreshTalkers.length
-
-      // 显示提示
-      if (appStore.isDebug && needsRefreshCount > 0) {
-        ElMessage.info({
-          message: `正在后台刷新 ${needsRefreshCount} 个会话的消息...`,
-          duration: 2000
-        })
-      }
-    } catch (error) {
-      console.error('❌ 检测需要刷新的会话失败:', error)
-    }
-  }
-}
+// autoRefresh 方法已移动到 SessionList.vue 组件中
 
 // 启动自动刷新
 const startAutoRefresh = () => {
@@ -248,7 +218,7 @@ const startAutoRefresh = () => {
     autoRefreshTimer.value = window.setInterval(async () => {
       if (!isAutoRefreshing.value) {
         isAutoRefreshing.value = true
-        await autoRefresh()
+        await sessionListRef.value?.autoRefresh?.()
         setTimeout(() => {
           isAutoRefreshing.value = false
         }, 1000)
