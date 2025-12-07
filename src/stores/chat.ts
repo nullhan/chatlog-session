@@ -10,30 +10,17 @@ import type { SearchParams } from '@/types/api'
 import { useAppStore } from './app'
 import { useMessageCacheStore } from './messageCache'
 import { useAutoRefreshStore } from './autoRefresh'
-import { toCST, formatCSTRange, subtractDays } from '@/utils/timezone'
+import { formatCSTRange } from '@/utils/timezone'
 import { formatDateGroup, formatDate } from '@/utils/date'
-
-/**
- * 获取消息列表中最新消息的东八区时间
- */
-function getLatestMessageTime(messages: Message[]): string | undefined {
-  if (!messages || messages.length === 0) return undefined
-
-  const latest = messages[messages.length - 1]
-
-  return latest.time
-}
-
-/**
- * 获取消息列表中最老消息的东八区时间
- */
-function getFirstMessageTime(messages: Message[]): string | undefined {
-  if (!messages || messages.length === 0) return undefined
-
-  const newest = messages[0]
-
-  return newest.time
-}
+import {
+  getLatestMessageTime,
+  getFirstMessageTime,
+  fetchSmartHistoryMessages,
+  deduplicateMessages,
+  detectTimeGap,
+  loadMessagesInTimeRange,
+  handleEmptyResult
+} from './chat/utils'
 
 export const useChatStore = defineStore('chat', () => {
   const appStore = useAppStore()
@@ -425,320 +412,6 @@ export const useChatStore = defineStore('chat', () => {
    */
 
 
-  /**
-   * 计算消息密度（条/天）
-   * 基于已加载的消息分析时间分布
-   */
-  function calculateMessageDensity(talker: string): number {
-    const msgs = messages.value.filter(m => m.talker === talker)
-    if (msgs.length < 2) return 0 // 无法计算密度
-
-    const oldest = msgs[0]
-    const newest = msgs[msgs.length - 1]
-    const oldestTime = oldest.time ? new Date(oldest.time).getTime() : oldest.createTime * 1000
-    const newestTime = newest.time ? new Date(newest.time).getTime() : newest.createTime * 1000
-
-    const timeSpanDays = (newestTime - oldestTime) / (1000 * 60 * 60 * 24)
-    if (timeSpanDays < 0.01) return msgs.length * 100 // 消息集中在很短时间内，认为超高密度
-
-    const density = msgs.length / timeSpanDays
-    return density
-  }
-
-  /**
-   * 根据消息密度和 pageSize 确定初始时间范围（天数）
-   * 目标：时间范围内的消息数接近 pageSize，但不超过太多
-   *
-   * 计算公式：daysRange = pageSize / density
-   * 例如：pageSize=50, density=10条/天 → daysRange=5天
-   */
-  function getInitialDaysRange(talker: string, limit: number): number {
-    const density = calculateMessageDensity(talker)
-
-    if (density <= 0) {
-      // 无法计算密度，使用默认值
-      // 默认假设中等密度（5条/天），返回 pageSize/5 天
-      return Math.max(Math.ceil(limit / 5), 7) // 至少 7 天
-    }
-
-    // 基于密度和 pageSize 计算理想的天数
-    // 目标：daysRange * density ≈ pageSize
-    let daysRange = Math.ceil(limit / density)
-
-    // 设置合理的边界
-    const minDays = 0.5   // 最少半天
-    const maxDays = 90  // 最多 90 天
-
-    // 确保在合理范围内
-    daysRange = Math.max(minDays, Math.min(maxDays, daysRange))
-
-    if (appStore.isDebug) {
-      console.log('📐 Calculate days range:', {
-        density: density.toFixed(2),
-        pageSize: limit,
-        calculatedDays: Math.ceil(limit / density),
-        finalDays: daysRange,
-        estimatedMessages: Math.round(daysRange * density)
-      })
-    }
-
-    return daysRange
-  }
-
-  /**
-   * 在指定时间范围内加载消息
-   */
-  async function loadMessagesInTimeRange(
-    talker: string,
-    timeRange: string,
-    limit: number,
-    offset: number
-  ): Promise<Message[]> {
-    return await chatlogAPI.getSessionMessages(talker, timeRange, limit, offset, 1)
-  }
-
-  /**
-   * 智能获取历史消息（包含重试逻辑）
-   */
-  async function fetchSmartHistoryMessages(
-    talker: string,
-    beforeTime: string | number,
-    limit: number,
-    offset: number
-  ): Promise<{ result: Message[], finalTimeRange: string, retryCount: number, daysRange: number }> {
-    // 将 beforeTime 转换为 Date 对象
-    const beforeDate = typeof beforeTime === 'string'
-      ? new Date(beforeTime)
-      : new Date(beforeTime * 1000)
-
-    const density = calculateMessageDensity(talker)
-    let daysRange = getInitialDaysRange(talker, limit)
-
-    if (appStore.isDebug) {
-      console.log('🔍 Load new time range:', {
-        density: density.toFixed(2),
-        initialDaysRange: daysRange,
-        beforeTime,
-        beforeDate: toCST(beforeDate),
-        offset
-      })
-    }
-
-    let result: Message[] = []
-    let finalTimeRange = ''
-    let retryCount = 0
-    const maxRetries = 3
-
-    // 智能加倍策略：最多重试 3 次
-    while (result.length === 0 && retryCount < maxRetries) {
-      const startDate = subtractDays(beforeDate, daysRange)
-
-      // 使用东八区（UTC+8）格式
-      const timeRange = formatCSTRange(startDate, beforeDate)
-      finalTimeRange = timeRange
-
-      if (appStore.isDebug) {
-        console.log(`🔄 Loading history attempt ${retryCount + 1}/${maxRetries}:`, {
-          timeRange,
-          daysRange,
-          density: density.toFixed(2),
-          offset,
-          limit
-        })
-      }
-
-      // 调用 API
-      result = await loadMessagesInTimeRange(talker, timeRange, limit, offset)
-
-      if (result.length === 0) {
-        daysRange *= 2  // 加倍：0.5→1→2→4, 7→14→28
-        retryCount++
-      }
-    }
-
-    return { result, finalTimeRange, retryCount, daysRange }
-  }
-
-  /**
-   * 消息去重
-   */
-  function deduplicateMessages(newMessages: Message[]): Message[] {
-    // 使用 Map 索引已有消息，提升去重性能从 O(n*m) 到 O(n)
-    const existingMessagesMap = new Map<string, Message>()
-    messages.value.forEach(msg => {
-      // 使用复合键：seq + time + talker，确保唯一性
-      const key = `${msg.seq}_${msg.time}_${msg.talker}`
-      existingMessagesMap.set(key, msg)
-    })
-
-    // O(n) 复杂度去重
-    const uniqueNewMessages = newMessages.filter(newMsg => {
-      const key = `${newMsg.seq}_${newMsg.time}_${newMsg.talker}`
-      if (existingMessagesMap.has(key)) {
-        // 如果键存在，进一步比较内容确保完全一致
-        const existingMsg = existingMessagesMap.get(key)!
-        return !(
-          existingMsg.sender === newMsg.sender &&
-          existingMsg.type === newMsg.type &&
-          existingMsg.content === newMsg.content &&
-          JSON.stringify(existingMsg.contents) === JSON.stringify(newMsg.contents)
-        )
-      }
-      return true
-    })
-
-    if (appStore.isDebug && uniqueNewMessages.length < newMessages.length) {
-      console.log('🔍 Duplicate messages removed:', {
-        total: newMessages.length,
-        unique: uniqueNewMessages.length,
-        duplicates: newMessages.length - uniqueNewMessages.length
-      })
-    }
-
-    return uniqueNewMessages
-  }
-
-  /**
-   * 检测时间间隙
-   */
-  function detectTimeGap(
-    talker: string,
-    timeRange: string,
-    offset: number,
-    newMessages: Message[]
-  ): Message | null {
-    if (offset === 0 && timeRange && newMessages.length > 0) {
-      // 只在首次加载（offset=0）时检测间隙
-      const requestedStartTime = parseTimeRangeStart(timeRange)
-      const oldestReturnedMsg = newMessages[0]
-      const oldestMsgTime = oldestReturnedMsg.time
-        ? new Date(oldestReturnedMsg.time).getTime()
-        : oldestReturnedMsg.createTime * 1000
-
-      // 计算时间差（秒）
-      const timeDiffSeconds = (oldestMsgTime - requestedStartTime) / 1000
-      const gapThresholdSeconds = 600 // 600秒
-
-      if (timeDiffSeconds > gapThresholdSeconds) {
-        // 存在显著的时间间隙，创建 EmptyRange 标记
-        const gapStartDate = new Date(requestedStartTime)
-        const gapEndDate = new Date(oldestMsgTime)
-        const gapTimeRange = formatCSTRange(gapStartDate, gapEndDate)
-
-        const newestMsgTime = oldestReturnedMsg.time
-        const emptyRangeMessage = createEmptyRangeMessage(
-          talker,
-          gapTimeRange,
-          newestMsgTime,
-          0, // triedTimes = 0 表示这是自动检测的间隙
-          requestedStartTime
-        )
-
-        if (appStore.isDebug) {
-          console.log('📝 EmptyRange detected for time gap:', {
-            talker,
-            requestedStartTime: new Date(requestedStartTime).toISOString(),
-            oldestMsgTime: new Date(oldestMsgTime).toISOString(),
-            gapDays: (timeDiffSeconds / 86400).toFixed(1),
-            gapTimeRange,
-            suggestedBeforeTime: new Date(requestedStartTime).toISOString()
-          })
-        }
-
-        return emptyRangeMessage
-      }
-    }
-    return null
-  }
-
-  /**
-   * 插入消息到列表，处理 EmptyRange
-   */
-  function insertMessagesWithEmptyRange(
-    emptyRangeToInsert: Message | null,
-    newMessages: Message[]
-  ): void {
-    // 追加到消息列表头部（历史消息在前）
-    // 如果有 EmptyRange，先插入 EmptyRange，再插入真实消息
-    if (emptyRangeToInsert) {
-      messages.value = [emptyRangeToInsert, ...newMessages, ...messages.value]
-    } else {
-      messages.value = [...newMessages, ...messages.value]
-    }
-  }
-
-  /**
-   * 准备返回结果
-   */
-  function prepareReturnResult(
-    emptyRangeToInsert: Message | null,
-    result: Message[],
-    hasMoreHistory: boolean,
-    finalTimeRange: string,
-    offset: number
-  ): { messages: Message[], hasMore: boolean, timeRange: string, offset: number } {
-    // 返回的 messages 包含 EmptyRange（如果有）
-    const returnMessages = emptyRangeToInsert
-      ? [emptyRangeToInsert, ...result]
-      : result
-
-    return {
-      messages: returnMessages,
-      hasMore: hasMoreHistory,
-      timeRange: finalTimeRange,
-      offset: offset + result.length  // 返回下一页的 offset
-    }
-  }
-
-  /**
-   * 处理空结果情况
-   */
-  function handleEmptyResult(
-    talker: string,
-    timeRange: string,
-    offset: number,
-    retryCount: number
-  ): { messages: Message[], hasMore: boolean, timeRange: string, offset: number } {
-    if (offset === 0) {
-      // 首次加载（offset=0）且重试后仍然没有消息
-      // 插入 EmptyRange 消息标记这个空时间范围
-      const suggestedBeforeTime = parseTimeRangeStart(timeRange)
-      const newestMsgTime = getFirstMessageTime(messages.value.filter(m => m.talker === talker))
-      const emptyRangeMessage = createEmptyRangeMessage(
-        talker,
-        timeRange,
-        newestMsgTime,
-        retryCount,
-        suggestedBeforeTime
-      )
-
-      if (appStore.isDebug) {
-        console.log('📝 EmptyRange message created for empty history:', {
-          talker,
-          timeRange,
-          triedTimes: retryCount,
-          suggestedBeforeTime: new Date(suggestedBeforeTime).toISOString()
-        })
-      }
-
-      // 插入 EmptyRange 到消息列表头部
-      messages.value = [emptyRangeMessage, ...messages.value]
-
-      return {
-        messages: [emptyRangeMessage],
-        hasMore: true,
-        timeRange,
-        offset: 0
-      }
-    } else {
-      // 分页加载（offset>0）返回空结果，说明当前时间范围已加载完
-      if (appStore.isDebug) {
-        console.log('✅ Current time range completed, no more messages at offset:', offset)
-      }
-      return { messages: [], hasMore: false, timeRange, offset }
-    }
-  }
-
   async function loadHistoryMessages(
     talker: string,
     beforeTime: string | number,
@@ -774,10 +447,10 @@ export const useChatStore = defineStore('chat', () => {
         }
 
         // 直接调用 API
-        result = await chatlogAPI.getSessionMessages(talker, existingTimeRange, limit, offset, 1)
+        result = await loadMessagesInTimeRange(talker, existingTimeRange, limit, offset)
       } else {
         // 首次加载：使用智能策略获取消息
-        const smartResult = await fetchSmartHistoryMessages(talker, beforeTime, limit, offset)
+        const smartResult = await fetchSmartHistoryMessages(messages.value, talker, beforeTime, limit, offset, appStore.isDebug)
         result = smartResult.result
         finalTimeRange = smartResult.finalTimeRange
         retryCount = smartResult.retryCount
@@ -785,7 +458,16 @@ export const useChatStore = defineStore('chat', () => {
 
       // 如果返回空结果
       if (result.length === 0) {
-        return handleEmptyResult(talker, finalTimeRange, offset, retryCount)
+        const emptyResult = handleEmptyResult(messages.value, talker, finalTimeRange, offset, retryCount, appStore.isDebug)
+        if (emptyResult.newMessages && emptyResult.newMessages.length > 0) {
+          messages.value = emptyResult.messages
+        }
+        return {
+          messages: emptyResult.newMessages,
+          hasMore: emptyResult.hasMore,
+          timeRange: emptyResult.timeRange,
+          offset: emptyResult.offset
+        }
       }
 
       // 成功加载到消息
@@ -799,13 +481,17 @@ export const useChatStore = defineStore('chat', () => {
       }
 
       // 消息去重
-      const uniqueNewMessages = deduplicateMessages(result)
+      const uniqueNewMessages = deduplicateMessages(messages.value, result, appStore.isDebug)
 
       // 检测时间间隙：如果请求的时间范围起点和返回的最早消息之间有间隙，插入 EmptyRange
-      const emptyRangeToInsert = detectTimeGap(talker, finalTimeRange, offset, uniqueNewMessages)
+      const emptyRangeToInsert = detectTimeGap(talker, finalTimeRange, offset, uniqueNewMessages, appStore.isDebug)
 
       // 插入消息到列表
-      insertMessagesWithEmptyRange(emptyRangeToInsert, uniqueNewMessages)
+      if (emptyRangeToInsert) {
+        messages.value = [emptyRangeToInsert, ...uniqueNewMessages, ...messages.value]
+      } else {
+        messages.value = [...uniqueNewMessages, ...messages.value]
+      }
 
       // 清除提示信息
       historyLoadMessage.value = ''
@@ -825,11 +511,17 @@ export const useChatStore = defineStore('chat', () => {
         })
       }
 
-      // 注意：不修改 hasMore 状态，因为它是用于分页加载的
-      // 历史消息加载的状态由组件层的 hasMoreHistory 管理
-
       // 准备返回结果
-      return prepareReturnResult(emptyRangeToInsert, result, hasMoreHistory, finalTimeRange, offset)
+      const returnMessages = emptyRangeToInsert
+        ? [emptyRangeToInsert, ...result]
+        : result
+
+      return {
+        messages: returnMessages,
+        hasMore: hasMoreHistory,
+        timeRange: finalTimeRange,
+        offset: offset + result.length
+      }
     } catch (err) {
       error.value = err as Error
       appStore.setError(err as Error)
