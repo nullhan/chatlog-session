@@ -28,6 +28,7 @@ export interface ChatlogParams {
   sender?: string
   limit?: number
   offset?: number
+  bottom?: number
   format?: 'json' | 'csv' | 'text'
 }
 

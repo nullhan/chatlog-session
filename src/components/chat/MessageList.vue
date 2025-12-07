@@ -106,7 +106,7 @@ const loadMessages = async (loadMore = false) => {
 }
 
 // 加载更多消息（加载更旧的历史消息）
-const handleLoadMore = async () => {
+const handleLoadHistory = async () => {
   if (loadingHistory.value || !hasMoreHistory.value || messages.value.length === 0) {
     return
   }
@@ -217,7 +217,7 @@ const handleLoadMore = async () => {
         await nextTick()
         setTimeout(() => {
           if (!loadingHistory.value && hasMoreHistory.value && historyLoadContext.value) {
-            handleLoadMore()
+            handleLoadHistory()
           }
         }, 100)
       } else {
@@ -251,7 +251,7 @@ const checkAndLoadMore = async (loadedCount: number) => {
       totalMessages: messages.value.length
     })
 
-    await handleLoadMore()
+    await handleLoadHistory()
   } else {
     console.log('✅ Loading complete', {
       loadedCount,
@@ -310,7 +310,7 @@ const handleScroll = () => {
 
     // 接近顶部时自动加载历史消息（触发距离 300px）
     if (scrollTop < 300 && hasMoreHistory.value && !loadingHistory.value && !loading.value) {
-      handleLoadMore()
+      handleLoadHistory()
     }
   }, 100) // 100ms 防抖
 }
@@ -443,7 +443,7 @@ defineExpose({
       <div v-else-if="showLoadMore && !loadingHistory" class="message-list__load-more">
         <el-button
           text
-          @click="handleLoadMore"
+          @click="handleLoadHistory"
         >
           加载更多历史消息
         </el-button>

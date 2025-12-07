@@ -154,14 +154,16 @@ class ChatlogAPI {
    * @param time 时间参数，格式：YYYY-MM-DD 或 YYYY-MM-DD~YYYY-MM-DD，默认今天
    * @param limit 返回数量
    * @param offset 偏移量
+   * @param bottom 是否从末尾开始截取，1=从 later time 到 earlier time
    * @returns 消息列表
    */
-  getSessionMessages(talker: string, time?: string, limit = 50, offset = 0): Promise<Message[]> {
+  getSessionMessages(talker: string, time?: string, limit = 50, offset = 0, bottom = 0): Promise<Message[]> {
     return this.getChatlog({
       talker,
       time: time || getToday(),
       limit,
       offset,
+      bottom,
     })
   }
 

@@ -270,7 +270,7 @@ export const useChatStore = defineStore('chat', () => {
    * 加载消息列表
    * 优先从缓存加载，如果没有缓存则从 API 加载并缓存
    */
-  async function loadMessages(talker: string, page = 1, append = false, timeRange?: string) {
+  async function loadMessages(talker: string, page = 1, append = false, timeRange?: string, bottom = 0) {
     //如果 beforeTime 不包含 ~ , 则说明不是时间范围， 则需要补充成一个时间范围
     if (timeRange && !timeRange.includes('~')) {
       // 获取beforeTime 当天的 0 点
@@ -325,7 +325,7 @@ export const useChatStore = defineStore('chat', () => {
         const offset = (page - 1) * limit
 
         // 直接使用传入的时间字符串参数
-        result = await chatlogAPI.getSessionMessages(talker, timeRange, limit, offset)
+        result = await chatlogAPI.getSessionMessages(talker, timeRange, limit, offset, bottom)
 
         // 第一页时保存到缓存
         if (page === 1 && !append) {
@@ -428,7 +428,7 @@ export const useChatStore = defineStore('chat', () => {
     beforeTime: string | number,
     offset: number = 0,
     existingTimeRange?: string
-  ): Promise<{ messages: Message[], hasMore: boolean, timeRange: string, offset: number }> {
+   ): Promise<{ messages: Message[], hasMore: boolean, timeRange: string, offset: number }> {
     if (loadingHistory.value) {
       console.warn('History loading already in progress')
       return { messages: [], hasMore: false, timeRange: '', offset: 0 }
@@ -459,7 +459,7 @@ export const useChatStore = defineStore('chat', () => {
         }
 
         // 直接调用 API
-        result = await chatlogAPI.getSessionMessages(talker, existingTimeRange, limit, offset)
+        result = await chatlogAPI.getSessionMessages(talker, existingTimeRange, limit, offset, 1)
       } else {
         // 首次加载：需要计算时间范围
         // 将 beforeTime 转换为 Date 对象
@@ -562,7 +562,7 @@ export const useChatStore = defineStore('chat', () => {
           }
 
           // 调用 API
-          result = await chatlogAPI.getSessionMessages(talker, timeRange, limit, offset)
+          result = await chatlogAPI.getSessionMessages(talker, timeRange, limit, offset, 1)
 
           if (result.length === 0) {
             daysRange *= 2  // 加倍：0.5→1→2→4, 7→14→28
@@ -771,7 +771,7 @@ export const useChatStore = defineStore('chat', () => {
     clearSelection()
 
     // 加载新会话的消息
-    await loadMessages(talker)
+    await loadMessages(talker, 1, false)
   }
 
   /**
