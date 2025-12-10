@@ -36,6 +36,7 @@ export enum RichMessageSubType {
   Refer = 57,
   Pat = 62,
   Live = 63,
+  FileDownloading = 74,
   Transfer = 2000,
   RedPacket = 2001,
 }

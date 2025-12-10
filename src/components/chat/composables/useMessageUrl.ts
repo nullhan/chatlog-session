@@ -1,5 +1,6 @@
 import { computed } from 'vue'
 import type { Message } from '@/types'
+import { RichMessageSubType } from '@/types/message'
 import { mediaAPI } from '@/api/media'
 
 const PROXY_BASE = 'https://spmc.sponeur.com/proxy'
@@ -96,6 +97,9 @@ export function useMessageUrl(message: Message) {
 
   // 文件名
   const fileName = computed(() => {
+    if (message.subType === RichMessageSubType.FileDownloading) {
+      return '文件信息加载中...'
+    }
     return message.contents?.title || message.fileName || '未知文件'
   })
 

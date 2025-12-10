@@ -37,7 +37,10 @@ export function useMessageContent(message: Message) {
     () => message.type === MessageType.File && message.subType === RichMessageSubType.Forwarded
   )
   const isFileMessage = computed(
-    () => message.type === MessageType.File && message.subType === RichMessageSubType.File
+    () =>
+      message.type === MessageType.File &&
+      (message.subType === RichMessageSubType.File ||
+        message.subType === RichMessageSubType.FileDownloading)
   )
   const isMiniProgramMessage = computed(
     () => message.type === MessageType.File && message.subType === RichMessageSubType.MiniProgram
