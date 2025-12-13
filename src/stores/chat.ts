@@ -5,7 +5,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { chatlogAPI, mediaAPI } from '@/api'
 import type { Message } from '@/types/message'
-import { createEmptyRangeMessage, parseTimeRangeStart } from '@/types/message'
+import { createEmptyRangeMessage, createGapMessage, parseTimeRangeStart, parseTimeRangeEnd } from '@/types/message'
 import type { SearchParams } from '@/types/api'
 import { useAppStore } from './app'
 import { useMessageCacheStore } from './messageCache'
@@ -483,38 +483,116 @@ export const useChatStore = defineStore('chat', () => {
       // 消息去重
       const uniqueNewMessages = deduplicateMessages(messages.value, result, appStore.isDebug)
 
-      // 检测时间间隙：如果请求的时间范围起点和返回的最早消息之间有间隙，插入 EmptyRange
-      const emptyRangeToInsert = detectTimeGap(talker, finalTimeRange, offset, uniqueNewMessages, appStore.isDebug)
+      // 判断是否还有更多历史消息
+      // 如果返回的消息数等于 limit，说明该时间范围还有更多数据
+      const hasMoreHistory = result.length >= limit
+
+      // 如果满载，插入 Gap 消息到底部，标记更新的未加载数据
+      // 如果满载，则不检测 EmptyRange（两者互斥）
+      let gapToInsert: Message | null = null
+      let emptyRangeToInsert: Message | null = null
+      
+      if (hasMoreHistory && uniqueNewMessages.length > 0) {
+        // 检查新数据是否与已有数据衔接
+        // 找到第一条非虚拟消息作为已有数据的最早消息
+        const existingFirstRealMsg = messages.value.find(msg => !msg.isGap && !msg.isEmptyRange)
+        
+        let isConnected = false
+        if (existingFirstRealMsg) {
+          // 使用原始 result 而不是 uniqueNewMessages，因为后者已经去重
+          const newestLoadedMsg = result[result.length - 1]
+          
+          // 比较 seq、time、sender 来判断是否是同一条消息或相邻消息
+          if (newestLoadedMsg.seq === existingFirstRealMsg.seq && 
+              newestLoadedMsg.time === existingFirstRealMsg.time) {
+            // 最新加载的消息和已有最早消息是同一条，说明已衔接
+            isConnected = true
+          } else {
+            // 检查时间是否紧密相连（时间差小于等于 1 秒）
+            const newestLoadedTime = newestLoadedMsg.time 
+              ? new Date(newestLoadedMsg.time).getTime() 
+              : newestLoadedMsg.createTime * 1000
+            const existingFirstTime = existingFirstRealMsg.time 
+              ? new Date(existingFirstRealMsg.time).getTime() 
+              : existingFirstRealMsg.createTime * 1000
+            
+            const timeDiff = Math.abs(existingFirstTime - newestLoadedTime)
+            if (timeDiff <= 1000) {
+              // 时间差小于等于 1 秒，认为是衔接的
+              isConnected = true
+            }
+          }
+        }
+        
+        if (!isConnected) {
+          // 如果未衔接，才插入 Gap
+          // 历史消息加载使用 bottom=1，从时间范围末尾开始返回
+          // Gap 标记：从最新加载消息的时间到请求的结束时间
+          const requestedEndTime = parseTimeRangeEnd(finalTimeRange)
+          const newestLoadedMsg = uniqueNewMessages[uniqueNewMessages.length - 1]
+          const newestLoadedTime = newestLoadedMsg.time 
+            ? new Date(newestLoadedMsg.time).getTime() 
+            : newestLoadedMsg.createTime * 1000
+          
+          // Gap 标记更新的未加载部分
+          gapToInsert = createGapMessage(
+            talker, 
+            newestLoadedTime,
+            requestedEndTime,
+            result.length
+          )
+          
+          if (appStore.isDebug) {
+            console.log('📌 Creating Gap message at bottom for newer data:', {
+              newestLoaded: new Date(newestLoadedTime).toISOString(),
+              requestedEnd: new Date(requestedEndTime).toISOString(),
+              estimatedCount: result.length
+            })
+          }
+        } else {
+          if (appStore.isDebug) {
+            console.log('✅ New data is connected to existing data, no Gap needed')
+          }
+        }
+      } else {
+        // 如果未满载，检测时间间隙，插入 EmptyRange
+        emptyRangeToInsert = detectTimeGap(talker, finalTimeRange, offset, uniqueNewMessages, appStore.isDebug)
+      }
 
       // 插入消息到列表
+      // EmptyRange 在顶部（未满载时），Gap 在底部（满载时），两者互斥
+      const messagesToInsert: Message[] = []
       if (emptyRangeToInsert) {
-        messages.value = [emptyRangeToInsert, ...uniqueNewMessages, ...messages.value]
-      } else {
-        messages.value = [...uniqueNewMessages, ...messages.value]
+        messagesToInsert.push(emptyRangeToInsert)
       }
+      messagesToInsert.push(...uniqueNewMessages)
+      if (gapToInsert) {
+        messagesToInsert.push(gapToInsert)
+      }
+      messages.value = [...messagesToInsert, ...messages.value]
 
       // 清除提示信息
       historyLoadMessage.value = ''
-
-      // 判断是否还有更多历史消息
-      // 如果返回的消息数等于 limit，说明可能还有更多（在同一时间范围内）
-      const hasMoreHistory = result.length >= limit
 
       if (appStore.isDebug) {
         console.log('📊 History loading result:', {
           loaded: result.length,
           limit: limit,
           hasMore: hasMoreHistory,
-          currentOffset: offset,
-          nextOffset: offset + result.length,
+          gapInserted: !!gapToInsert,
           emptyRangeInserted: !!emptyRangeToInsert
         })
       }
 
       // 准备返回结果
-      const returnMessages = emptyRangeToInsert
-        ? [emptyRangeToInsert, ...result]
-        : result
+      const returnMessages: Message[] = []
+      if (emptyRangeToInsert) {
+        returnMessages.push(emptyRangeToInsert)
+      }
+      returnMessages.push(...result)
+      if (gapToInsert) {
+        returnMessages.push(gapToInsert)
+      }
 
       return {
         messages: returnMessages,
@@ -538,6 +616,156 @@ export const useChatStore = defineStore('chat', () => {
   /**
    * 刷新消息列表
    */
+  /**
+   * 加载 Gap 消息对应的历史数据
+   */
+  async function loadGapMessages(gapMessage: Message): Promise<{ success: boolean, hasMore: boolean }> {
+    if (!gapMessage.isGap || !gapMessage.gapData) {
+      console.warn('Invalid gap message')
+      return { success: false, hasMore: false }
+    }
+
+    const { timeRange } = gapMessage.gapData
+    const limit = pageSize.value
+
+    if (appStore.isDebug) {
+      console.log('🔄 Loading Gap messages:', {
+        timeRange,
+        gapId: gapMessage.id,
+        limit
+      })
+    }
+
+    try {
+      // 移除当前 Gap 消息
+      removeGapMessage(gapMessage.id)
+
+      // 直接加载 Gap 标记的时间范围数据（使用 bottom=1 从末尾开始）
+      const result = await loadMessagesInTimeRange(gapMessage.talker, timeRange, limit, 0)
+
+      if (appStore.isDebug) {
+        console.log('✅ Gap messages loaded:', {
+          count: result.length,
+          limit
+        })
+      }
+
+      if (result.length === 0) {
+        // 没有数据，不需要处理
+        return { success: false, hasMore: false }
+      }
+
+      // 消息去重
+      const uniqueNewMessages = deduplicateMessages(messages.value, result, appStore.isDebug)
+
+      // 判断是否还有更多数据
+      const hasMoreInGap = result.length >= limit
+
+      // 如果还有更多数据，创建新的 Gap 消息到底部
+      let newGapToInsert: Message | null = null
+      if (hasMoreInGap && uniqueNewMessages.length > 0) {
+        // 检查新数据是否与已有数据衔接
+        const existingFirstRealMsg = messages.value.find(msg => !msg.isGap && !msg.isEmptyRange)
+        
+        let isConnected = false
+        if (existingFirstRealMsg) {
+          // 使用原始 result 而不是 uniqueNewMessages
+          const newestLoadedMsg = result[result.length - 1]
+          
+          // 比较判断是否衔接
+          if (newestLoadedMsg.seq === existingFirstRealMsg.seq && 
+              newestLoadedMsg.time === existingFirstRealMsg.time) {
+            isConnected = true
+          } else {
+            const newestLoadedTime = newestLoadedMsg.time 
+              ? new Date(newestLoadedMsg.time).getTime() 
+              : newestLoadedMsg.createTime * 1000
+            const existingFirstTime = existingFirstRealMsg.time 
+              ? new Date(existingFirstRealMsg.time).getTime() 
+              : existingFirstRealMsg.createTime * 1000
+            
+            const timeDiff = Math.abs(existingFirstTime - newestLoadedTime)
+            if (timeDiff <= 1000) {
+              isConnected = true
+            }
+          }
+        }
+        
+        if (!isConnected) {
+          const requestedEndTime = parseTimeRangeEnd(timeRange)
+          const newestLoadedMsg = uniqueNewMessages[uniqueNewMessages.length - 1]
+          const newestLoadedTime = newestLoadedMsg.time 
+            ? new Date(newestLoadedMsg.time).getTime() 
+            : newestLoadedMsg.createTime * 1000
+          
+          // 创建新的 Gap 标记剩余未加载部分（底部）
+          newGapToInsert = createGapMessage(
+            gapMessage.talker, 
+            newestLoadedTime,
+            requestedEndTime,
+            result.length
+          )
+          
+          if (appStore.isDebug) {
+            console.log('📌 Creating new Gap at bottom for remaining data:', {
+              newestLoaded: new Date(newestLoadedTime).toISOString(),
+              requestedEnd: new Date(requestedEndTime).toISOString(),
+              estimatedCount: result.length
+            })
+          }
+        } else {
+          if (appStore.isDebug) {
+            console.log('✅ Gap data is connected to existing data, no new Gap needed')
+          }
+        }
+      }
+
+      // 插入新加载的消息（和可能的新 Gap）到列表
+      const messagesToInsert: Message[] = []
+      messagesToInsert.push(...uniqueNewMessages)
+      if (newGapToInsert) {
+        messagesToInsert.push(newGapToInsert)
+      }
+      messages.value = [...messagesToInsert, ...messages.value]
+
+      return {
+        success: result.length > 0,
+        hasMore: hasMoreInGap
+      }
+    } catch (err) {
+      console.error('Gap messages loading failed:', err)
+      // 加载失败，重新插入 Gap 消息
+      const gapIndex = messages.value.findIndex(m => !m.isGap && !m.isEmptyRange)
+      if (gapIndex !== -1) {
+        messages.value.splice(gapIndex, 0, gapMessage)
+      } else {
+        messages.value.unshift(gapMessage)
+      }
+      return { success: false, hasMore: false }
+    }
+  }
+
+  /**
+   * 移除指定会话的所有 Gap 消息
+   */
+  function removeGapMessages(talker: string) {
+    messages.value = messages.value.filter(msg => !(msg.isGap && msg.talker === talker))
+  }
+
+  /**
+   * 移除指定的 Gap 消息
+   */
+  function removeGapMessage(gapId: number) {
+    messages.value = messages.value.filter(msg => msg.id !== gapId)
+  }
+
+  /**
+   * 检查会话是否存在 Gap 消息
+   */
+  function hasGapMessage(talker: string): boolean {
+    return messages.value.some(msg => msg.isGap && msg.talker === talker)
+  }
+
   async function refreshMessages() {
     if (!currentTalker.value) return
     await loadMessages(currentTalker.value, 1, false)
@@ -834,6 +1062,10 @@ export const useChatStore = defineStore('chat', () => {
     loadMessages,
     loadMoreMessages,
     loadHistoryMessages,
+    loadGapMessages,
+    removeGapMessages,
+    removeGapMessage,
+    hasGapMessage,
     refreshMessages,
     switchSession,
     searchMessages,
@@ -853,6 +1085,6 @@ export const useChatStore = defineStore('chat', () => {
     getMessageStats,
     clearError,
     $reset,
-    cleanup,
+    cleanup
   }
 })

@@ -7,6 +7,7 @@ import { useAppStore } from '@/stores/app'
 import { mediaAPI } from '@/api/media'
 import { useMessageContent } from './composables/useMessageContent'
 import { useMessageUrl } from './composables/useMessageUrl'
+import { MoreFilled } from '@element-plus/icons-vue'
 
 // 消息类型组件
 import TextMessage from './message-types/TextMessage.vue'
@@ -44,6 +45,11 @@ const props = withDefaults(defineProps<Props>(), {
   showTime: false,
   showName: false
 })
+
+// 定义 emits
+const emit = defineEmits<{
+  'gap-click': [message: Message]
+}>()
 
 // 获取 app store
 const appStore = useAppStore()
@@ -277,13 +283,16 @@ const forwardedMessages = computed(() => {
     </div>
 
     <!-- Gap 虚拟消息 -->
-    <div v-else-if="isGapMessage" class="message-bubble__virtual">
-      <span class="virtual-text">⚠️ Gap: {{ message.content }}</span>
+    <div v-else-if="isGapMessage" class="message-bubble__virtual message-bubble__gap" @click="emit('gap-click', message)">
+      <el-button text>
+        <el-icon><MoreFilled /></el-icon>
+        <span>{{ message.content }}</span>
+      </el-button>
     </div>
 
     <!-- EmptyRange 虚拟消息 -->
-    <div v-else-if="isEmptyRangeMessage" class="message-bubble__virtual">
-      <span class="virtual-text">📭 EmptyRange: {{ message.content }}</span>
+    <div v-else-if="isEmptyRangeMessage" class="message-bubble__virtual message-bubble__empty-range">
+      <span class="virtual-text">📭 {{ appStore.isDebug ? 'EmptyRange: ' : '' }}{{ message.content }}</span>
     </div>
 
     <!-- 拍一拍消息 (type=49, subType=62) -->
@@ -603,6 +612,45 @@ const forwardedMessages = computed(() => {
   &--virtual {
     justify-content: center;
     padding: 12px 16px;
+  }
+
+  &__virtual {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+  }
+
+  &__gap {
+    cursor: pointer;
+    transition: all 0.3s;
+
+    &:hover {
+      background-color: var(--el-fill-color-light);
+    }
+
+    .el-button {
+      font-size: 13px;
+      color: var(--el-color-primary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+
+      .el-icon {
+        font-size: 16px;
+      }
+    }
+  }
+
+  &__empty-range {
+    .virtual-text {
+      padding: 4px 12px;
+      background-color: var(--el-fill-color-light);
+      border-radius: 4px;
+      font-size: 12px;
+      color: var(--el-text-color-secondary);
+      border-left: 3px solid var(--el-color-warning);
+    }
   }
 
   &__system {

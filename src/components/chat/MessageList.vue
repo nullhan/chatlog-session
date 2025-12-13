@@ -28,10 +28,6 @@ const hasMoreHistory = ref(true)
 const error = ref<string | null>(null)
 const historyLoadMessage = ref('')
 
-// 自动加载计数器（防止短时间内过多请求）
-const autoLoadCount = ref(0)
-const maxAutoLoad = 5
-
 // 历史消息加载的上下文（用于同一时间范围内的分页）
 const historyLoadContext = ref<{
   timeRange: string
@@ -118,39 +114,25 @@ const handleLoadHistory = async () => {
     const scrollTop = messageListRef.value?.scrollTop || 0
     const scrollHeight = messageListRef.value?.scrollHeight || 0
 
-    // 判断是继续在同一时间范围内加载，还是加载更早的时间范围
-    let beforeTime: string | number
-    let offset: number = 0
-    let timeRange: string | undefined = undefined
-
-    if (historyLoadContext.value && historyLoadContext.value.timeRange) {
-      // 继续在同一时间范围内加载下一页
-      beforeTime = historyLoadContext.value.beforeTime
-      offset = historyLoadContext.value.offset
-      timeRange = historyLoadContext.value.timeRange
-      console.log('📄 Continue loading in same time range:', {
-        timeRange: historyLoadContext.value.timeRange,
-        offset
-      })
-    } else {
-      // 首次加载或加载更早的时间范围
-      const oldestMessage = messages.value[0]
-      beforeTime = oldestMessage.time || oldestMessage.createTime
-
-      if (!beforeTime) {
-        console.warn('无法获取最早消息时间')
-        return
-      }
-
-      offset = 0
-      timeRange = undefined
-      // 重置自动加载计数器（开始新的时间范围）
-      autoLoadCount.value = 0
-      console.log('🔍 Load new time range, beforeTime:', beforeTime)
+    // 找到第一条非虚拟消息（非 Gap、非 EmptyRange）
+    const firstNonVirtualMessage = messages.value.find(msg => !msg.isGap && !msg.isEmptyRange)
+    
+    if (!firstNonVirtualMessage) {
+      console.warn('无法找到有效的消息作为加载起点')
+      return
     }
 
-    // 调用 store 的历史消息加载方法
-    const result = await chatStore.loadHistoryMessages(props.sessionId, beforeTime, offset, timeRange)
+    const beforeTime = firstNonVirtualMessage.time || firstNonVirtualMessage.createTime
+
+    if (!beforeTime) {
+      console.warn('无法获取最早消息时间')
+      return
+    }
+
+    console.log('🔍 Loading history before:', beforeTime)
+
+    // 调用 store 的历史消息加载方法（只请求一次）
+    const result = await chatStore.loadHistoryMessages(props.sessionId, beforeTime, 0, undefined)
 
     // 更新历史加载提示消息
     historyLoadMessage.value = chatStore.historyLoadMessage
@@ -165,72 +147,45 @@ const handleLoadHistory = async () => {
       }
     }
 
-    // 更新 hasMoreHistory 状态和加载上下文
+    // 更新 hasMoreHistory 状态
     if (result.messages.length === 0 && !chatStore.historyLoadMessage) {
-      // 确实没有更多消息了（多次重试后仍无消息）
+      // 确实没有更多消息了
       hasMoreHistory.value = false
-      historyLoadContext.value = null
-    } else if (chatStore.historyLoadMessage) {
-      // 有提示信息时，清空上下文，允许用户继续下拉加载更早的时间范围
-      hasMoreHistory.value = true
-      historyLoadContext.value = null
-    } else {
-      // 加载到了消息
-      // 注意：即使当前时间范围加载完了，仍然可以加载更早的时间范围
-      // 所以 hasMoreHistory 应该始终为 true（除非真的到了最早的消息）
-      hasMoreHistory.value = true
-
-      if (result.hasMore && result.timeRange) {
-        // 当前时间范围还有更多，保存上下文用于继续分页
-        historyLoadContext.value = {
-          timeRange: result.timeRange,
-          offset: result.offset,
-          beforeTime: beforeTime
-        }
-        console.log('💾 Save context for pagination:', {
-          timeRange: result.timeRange,
-          offset: result.offset
-        })
-      } else {
-        // 当前时间范围已加载完毕，清空上下文
-        // 下次触发时会加载更早的时间范围
-        historyLoadContext.value = null
-        console.log('🔚 Current time range completed, ready for earlier range')
-      }
-    }
-
-    // 如果返回了满载（等于 pageSize），自动继续加载同一时间范围的下一页
-    // 但限制最大自动加载次数，避免短时间内过多请求
-    if (result.messages.length > 0 && result.hasMore && result.messages.length >= chatStore.pageSize) {
-      if (autoLoadCount.value < maxAutoLoad) {
-        autoLoadCount.value++
-        console.log('🔄 Auto continuing in same time range...', {
-          loaded: result.messages.length,
-          pageSize: chatStore.pageSize,
-          nextOffset: result.offset,
-          timeRange: result.timeRange,
-          autoLoadCount: autoLoadCount.value,
-          maxAutoLoad
-        })
-
-        // 等待一小段时间后继续加载
-        await nextTick()
-        setTimeout(() => {
-          if (!loadingHistory.value && hasMoreHistory.value && historyLoadContext.value) {
-            handleLoadHistory()
-          }
-        }, 100)
-      } else {
-        console.log('⚠️ Auto load limit reached, please scroll to load more manually', {
-          autoLoadCount: autoLoadCount.value,
-          maxAutoLoad
-        })
-        // 达到限制后，保持上下文，用户可以手动触发继续加载
-      }
     }
   } catch (err) {
     console.error('加载历史消息失败:', err)
-    historyLoadContext.value = null
+  } finally {
+    loadingHistory.value = false
+  }
+}
+
+// 处理 Gap 消息点击
+const handleGapClick = async (gapMessage: Message) => {
+  if (loadingHistory.value) return
+
+  loadingHistory.value = true
+
+  try {
+    // 保存当前滚动位置
+    const scrollTop = messageListRef.value?.scrollTop || 0
+    const scrollHeight = messageListRef.value?.scrollHeight || 0
+
+    console.log('🔄 Loading Gap messages:', gapMessage.gapData)
+
+    // 加载 Gap 对应的数据
+    const result = await chatStore.loadGapMessages(gapMessage)
+
+    // 恢复滚动位置
+    if (result.success) {
+      await nextTick()
+      if (messageListRef.value) {
+        const newScrollHeight = messageListRef.value.scrollHeight
+        const heightDiff = newScrollHeight - scrollHeight
+        messageListRef.value.scrollTop = scrollTop + heightDiff
+      }
+    }
+  } catch (err) {
+    console.error('Gap 消息加载失败:', err)
   } finally {
     loadingHistory.value = false
   }
@@ -373,9 +328,13 @@ const shouldShowName = (index: number, messages: Message[]) => {
 // 监听会话ID变化
 watch(() => props.sessionId, (newId, oldId) => {
   if (newId && newId !== oldId) {
+    // 清理旧会话的 Gap 消息
+    if (oldId) {
+      chatStore.removeGapMessages(oldId)
+    }
     hasMoreHistory.value = true
     historyLoadMessage.value = ''
-    historyLoadContext.value = null  // 重置加载上下文
+    historyLoadContext.value = null
     loadMessages(false)
   }
 }, { immediate: true })
@@ -479,6 +438,7 @@ defineExpose({
             :show-avatar="shouldShowAvatar(index, group.messages)"
             :show-time="shouldShowTime(index, group.messages)"
             :show-name="shouldShowName(index, group.messages)"
+            @gap-click="handleGapClick"
           />
         </div>
       </template>
@@ -493,6 +453,7 @@ defineExpose({
           :show-avatar="shouldShowAvatar(index, messages)"
           :show-time="shouldShowTime(index, messages)"
           :show-name="shouldShowName(index, messages)"
+          @gap-click="handleGapClick"
         />
       </template>
 
